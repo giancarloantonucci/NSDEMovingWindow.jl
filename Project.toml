@@ -3,6 +3,12 @@ uuid = "90d73e86-9dda-4e5f-94e6-0228ced3acd1"
 authors = ["Giancarlo A. Antonucci"]
 version = "0.1.0"
 
+[deps]
+ArrowMacros = "46a4b217-d1c8-4502-9c1a-7bf73a71908c"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+TimeParallel = "be6fae49-30d2-4092-b236-0bef8b98bcec"
+
 [compat]
 julia = "1"
 
