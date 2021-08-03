@@ -1,14 +1,12 @@
-
 function NSDEBase.solve!(solution::MovingWindowSolution, problem, solver::MovingWindowSolver)
     @↓ u0, (t0, tN) ← tspan = problem
     @↓ 𝒫, τ, Δτ = solver
     @↓ 𝒢, P = 𝒫
     for m = 1:length(solution)
         solution[m] = TimeParallelSolution(problem, 𝒫)
-        tmp = solution[m]
-        @↓ U, T = tmp
+        @↓ U, T = solution[m]
         if m == 1
-            coarseguess!(solution[m], problem, u0, t0, t0 + τ, 𝒫)
+            TimeParallel.coarseguess!(solution[m], problem, u0, t0, t0 + τ, 𝒫)
         else
             ΔP = trunc(Int, P * Δτ / τ)
             N = P - ΔP + 1
@@ -23,7 +21,7 @@ function NSDEBase.solve!(solution::MovingWindowSolution, problem, solver::Moving
                 U[n+1] = chunk.u[end]
             end
         end
-        solve_serial!(solution[m], problem, 𝒫)
+        𝒫(solution[m], problem)
     end
     solution
 end
