@@ -1,14 +1,21 @@
-```@meta
-CurrentModule = MovingWindow
+# MovingWindow.jl
+
+This is the documentation of [MovingWindow.jl](https://github.com/antonuccig/MovingWindow.jl), a Julia package implementing time-parallel methods.
+
+## Manual
+
+```@contents
+Depth = 3
 ```
 
-# MovingWindow
+## API
 
-Documentation for [MovingWindow](https://github.com/antonuccig/MovingWindow.jl).
-
-```@index
-```
+All exported types and functions are considered part of the public API and thus documented in this manual.
 
 ```@autodocs
-Modules = [MovingWindow]
+```
+
+## Index
+
+```@index
 ```
