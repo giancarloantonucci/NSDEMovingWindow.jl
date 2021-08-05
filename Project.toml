@@ -12,6 +12,7 @@ TimeParallel = "be6fae49-30d2-4092-b236-0bef8b98bcec"
 
 [compat]
 RecipesBase = "1"
+TimeParallel = "0.1"
 julia = "1"
 
 [extras]
