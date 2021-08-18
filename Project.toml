@@ -11,6 +11,7 @@ RungeKutta = "3978d399-9848-4322-9a48-ca26b732c7dc"
 TimeParallel = "be6fae49-30d2-4092-b236-0bef8b98bcec"
 
 [compat]
+ArrowMacros = "0.1"
 julia = "1"
 
 [extras]
