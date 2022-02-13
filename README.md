@@ -9,7 +9,7 @@ A Julia package implementing the moving-window algorithm.
 MovingWindow.jl is compatible with Julia v1.0 and above. From the Julia REPL,
 
 ```julia
-]add TimeParallel
+]add https://github.com/giancarloantonucci/MovingWindow.jl
 ```
 
 Read the [documentation](https://giancarloantonucci.github.io/MovingWindow.jl/dev) for a complete overview of this package.
