@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 ArrowMacros = "46a4b217-d1c8-4502-9c1a-7bf73a71908c"
+NSDEBase = "5aa61ba9-7752-4810-b2ec-484f26c3f007"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 RungeKutta = "3978d399-9848-4322-9a48-ca26b732c7dc"
@@ -12,6 +13,7 @@ TimeParallel = "be6fae49-30d2-4092-b236-0bef8b98bcec"
 
 [compat]
 ArrowMacros = "0.1, 0.2"
+NSDEBase = "0.2"
 RecipesBase = "0.7.0, 0.8, 1.0"
 Reexport = "0.2, 1.0"
 TimeParallel = "0.1"
