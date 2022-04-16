@@ -12,5 +12,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "https://github.com/antonuccig/MovingWindow.jl"
+    repo = "https://github.com/giancarloantonucci/MovingWindow.jl"
 )

@@ -1,6 +1,6 @@
 # MovingWindow.jl
 
-This is the documentation of [MovingWindow.jl](https://github.com/antonuccig/MovingWindow.jl), a Julia package implementing time-parallel methods.
+This is the documentation of [MovingWindow.jl](https://github.com/giancarloantonucci/MovingWindow.jl), a Julia package implementing time-parallel methods.
 
 ## Manual
 

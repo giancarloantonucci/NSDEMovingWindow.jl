@@ -1,25 +1,46 @@
-@recipe function f(solution::MovingWindowSolution; vars = nothing, label = "")
-    fontfamily --> "Computer Modern"
-    framestyle --> :box
-    gridalpha --> 0.2
-    linewidth --> 1.5
-    minorgrid --> 0.1
-    minorgridstyle --> :dash
-    seriestype --> :path
-    tick_direction --> :out
-    xwiden --> false
-    M = length(solution)
-    for m in 1:M
-        vars --> vars
+@recipe function f(solution::MovingWindowSolution)
+    @↓ windows = solution
+    for m = 1:length(windows)
         @series begin
-            seriescolor --> m
+            if m != 1
+                label := ""
+            else
+                if haskey(plotattributes, :label)
+                    label := plotattributes[:label]
+                end
+            end
             solution[m]
         end
-        @series begin
-            seriescolor --> m
-            seriestype := :vline
-            linestyle --> :dash
-            [solution[m][end][end].t[end]]
+    end
+end
+
+@recipe function f(wrappedobject::NSDEBase._PhasePlot{<:MovingWindowSolution})
+    @↓ solution ← object = wrappedobject
+    @↓ windows = solution
+    for m = 1:length(windows)
+        @series NSDEBase._PhasePlot(solution[m])
+    end
+end
+
+@recipe function f(wrappedobject::NSDEBase._Convergence{<:MovingWindowSolution})
+    gridalpha         --> 0.2
+    markershape       --> :circle
+    markerstrokewidth --> 0
+    seriestype        --> :path
+    xticks            --> 0:1000
+    yticks            --> 0:1000
+    @↓ solution ← object = wrappedobject
+    @↓ windows, restarts = solution
+    @series begin
+        if haskey(plotattributes, :label)
+            label := plotattributes[:label][1]
         end
+        [length(solution[m].errors) for m = 1:length(windows)]
+    end
+    @series begin
+        if haskey(plotattributes, :label)
+            label := plotattributes[:label][2]
+        end
+        restarts
     end
 end

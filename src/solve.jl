@@ -1,33 +1,17 @@
-function NSDEBase.solve!(solution::MovingWindowSolution, problem, solver::MovingWindowSolver)
-    @↓ u0, (t0, tN) ← tspan = problem
-    @↓ 𝒫, τ, Δτ = solver
-    @↓ 𝒢, P = 𝒫
-    for m = 1:length(solution)
-        solution[m] = TimeParallelSolution(problem, 𝒫)
-        @↓ U, T = solution[m]
-        if m == 1
-            TimeParallel.coarseguess!(solution[m], problem, u0, t0, t0 + τ, 𝒫)
-        else
-            ΔP = trunc(Int, P * Δτ / τ)
-            N = P - ΔP + 1
-            for n = 1:length(T)
-                T[n] = solution[m-1].T[n] + Δτ
-            end
-            for n = 1:N
-                U[n] = solution[m-1].U[ΔP+n]
-            end
-            for n = N:P
-                chunk = 𝒢(problem, U[n], T[n], T[n+1])
-                U[n+1] = chunk.u[end]
-            end
-        end
-        𝒫(solution[m], problem)
-    end
-    solution
+"""
+    solve!(solution::AbstractMovingWindowSolution, problem, solver::AbstractMovingWindowSolver; kwargs...) :: AbstractMovingWindowSolution
+
+returns the [`AbstractMovingWindowSolution`](@ref) of an [`AbstractInitialValueProblem`](@ref).
+"""
+function NSDEBase.solve!(solution::AbstractMovingWindowSolution, problem::AbstractInitialValueProblem, solver::AbstractMovingWindowSolver; kwargs...)
+    return solver(solution, problem; kwargs...)
 end
 
-function NSDEBase.solve(problem, solver::MovingWindowSolver)
-    solution = MovingWindowSolution(problem, solver)
-    solve!(solution, problem, solver)
-    solution
+"""
+    solve(problem, solver::AbstractMovingWindowSolver; kwargs...) :: AbstractMovingWindowSolution
+
+returns the [`AbstractMovingWindowSolution`](@ref) of an [`AbstractInitialValueProblem`](@ref).
+"""
+function NSDEBase.solve(problem::AbstractInitialValueProblem, solver::AbstractMovingWindowSolver; kwargs...)
+    return solver(problem; kwargs...)
 end
