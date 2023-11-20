@@ -1,4 +1,4 @@
-@recipe function f(solution::MovingWindowSolution)
+@recipe function f(solution::MoWiSolution)
     @↓ windows = solution
     for m = 1:length(windows)
         @series begin
@@ -14,22 +14,22 @@
     end
 end
 
-@recipe function f(wrappedobject::NSDEBase._PhasePlot{<:MovingWindowSolution})
-    @↓ solution ← object = wrappedobject
+@recipe function f(wrapper::NSDEBase._PhasePlot{<:MoWiSolution})
+    @↓ solution ← plottable = wrapper
     @↓ windows = solution
     for m = 1:length(windows)
         @series NSDEBase._PhasePlot(solution[m])
     end
 end
 
-@recipe function f(wrappedobject::NSDEBase._Convergence{<:MovingWindowSolution})
-    gridalpha         --> 0.2
-    markershape       --> :circle
+@recipe function f(wrapper::NSDEBase._Convergence{<:MoWiSolution})
+    gridalpha --> 0.2
+    markershape --> :circle
     markerstrokewidth --> 0
-    seriestype        --> :path
-    xticks            --> 0:1000
-    yticks            --> 0:1000
-    @↓ solution ← object = wrappedobject
+    seriestype --> :path
+    xticks --> 0:1000
+    yticks --> 0:1000
+    @↓ solution ← plottable = wrapper
     @↓ windows, restarts = solution
     @series begin
         if haskey(plotattributes, :label)

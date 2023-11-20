@@ -7,10 +7,10 @@ using RecipesBase
 
 include("abstract.jl")
 include("utils.jl")
-include("mowa/adaptive.jl")
-include("mowa/constructor.jl")
-include("mowa/solution.jl")
-include("mowa/solve.jl")
+include("mowi/adaptive.jl")
+include("mowi/constructor.jl")
+include("mowi/solution.jl")
+include("mowi/solve.jl")
 include("solve.jl")
 include("plot.jl")
 
@@ -19,9 +19,9 @@ export AbstractMovingWindowSolution
 export AbstractMovingWindowCache
 export AbstractMovingWindowParameters
 
-export MoWA
-export MoWASolution
-export AdaptiveMoWAParameters
+export MoWi
+export MoWiSolution
+export AdaptiveMoWiParameters
 
 export MovingWindowSolution
 

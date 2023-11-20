@@ -1,6 +1,6 @@
-using MovingWindow
+using NSDEMovingWindow
 using Test
 
-@testset "MovingWindow.jl" begin
+@testset "NSDEMovingWindow.jl" begin
     # Write your tests here.
 end
