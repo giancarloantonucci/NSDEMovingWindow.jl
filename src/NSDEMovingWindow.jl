@@ -12,7 +12,7 @@ include("mowi/constructor.jl")
 include("mowi/solution.jl")
 include("mowi/solve.jl")
 include("solve.jl")
-include("plot.jl")
+include("plots_recipes.jl")
 
 export AbstractMovingWindowSolver
 export AbstractMovingWindowSolution
