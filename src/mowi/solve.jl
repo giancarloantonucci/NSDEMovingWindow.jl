@@ -1,4 +1,6 @@
-function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
+function (mowi::MoWi)(cache::MoWiCache, solution::MoWiSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
+    @↓ τ0, τN, τJ = cache
+
     @↓ parallelsolver, adaptive, τ, Δτ = mowi
     if adaptive !== nothing
         @↓ δτ⁻, δτ⁺, δΔτ⁻, δΔτ⁺, R, fineupdate = adaptive
@@ -8,8 +10,8 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
     @↓ N = parallelsolver.parameters
 
     @↓ hF ← h = finesolver.stepsize
-    hF₀ = hF
     @↓ hG ← h = coarsesolver.stepsize
+    hF₀ = hF
     hG₀ = hG
 
     @↓ ϵ = tolerance
@@ -17,24 +19,23 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
     @↓ windows, restarts = solution
     @↓ u0, (t0, tN) ← tspan = problem
 
-    τ0 = t0
-    τN = τ0 + τ
-    τJ = τ0 # τJ = T_{N-ΔN}^{m-1} = T_{ΔN}^m
-
     # main loop
     m = 1
     M = M₀ = length(windows)
 
-    cache = NSDETimeParallel.TimeParallelCache(problem, parallelsolver)
-    @↓ skips, U, T = cache
+    parallelcache = NSDETimeParallel.TimeParallelCache(problem, parallelsolver)
+    @↓ skips = parallelcache
+    parallelsolution = NSDETimeParallel.TimeParallelSolution(problem, parallelsolver)
+    @↓ U, T = parallelsolution.lastiterate
 
     flag = true
     itsnan = false
+    
     while (τ0 < tN && τJ < tN) || itsnan
 
         if m > M
-            append!(windows, Vector{AbstractTimeParallelSolution}(undef, M₀)) # TO-DO: Vector{typeof(windows[m])}(undef, M₀)
-            append!(restarts, zeros(M₀)) # TO-DO: Vector{typeof(restarts[m])}(undef, M₀)
+            append!(windows, Vector{AbstractTimeParallelSolution}(undef, M₀)) # TODO: Vector{typeof(windows[m])}(undef, M₀)
+            append!(restarts, zeros(M₀)) # TODO: Vector{typeof(restarts[m])}(undef, M₀)
             M += M₀
         end
 
@@ -45,13 +46,12 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
         if m == 1
             # initial guess
             U[1] = u0
-            skips[1] = true
             for n = 1:N-1
                 windowchunkproblem = copy(problem, U[n], T[n], T[n+1])
                 windowchunksolution = coarsesolver(windowchunkproblem)
                 U[n+1] = windowchunksolution(T[n+1])
-                skips[n+1] = true
             end
+            skips .= true
         elseif m > 1
             Uₙs = if restarts[m] ≠ 0
                 windows[m] # i.e. previous restart
@@ -61,6 +61,15 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
             # shifting procedure
             for n = 1:N
                 if T[n] ≤ τJ
+                    # if mode == "SERIAL"
+                    #     U[n] = Uₙs(T[n])
+                    # elseif mode == "DISTRIBUTED"
+
+                    # end
+
+                    # println(Uₙs.lastiterate.T[n], " ", T[n], " ", findfirst(Uₙs.lastiterate.T .≈ T[n]))
+                    # U[n] = Uₙs.lastiterate.U[n]
+
                     U[n] = Uₙs(T[n])
                     if n == 1
                         skips[n] = true
@@ -69,7 +78,8 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
                     end
                 else
                     windowchunkproblem = copy(problem, U[n-1], T[n-1], T[n])
-                    U[n] = coarsesolver(windowchunkproblem).u[end]
+                    windowchunksolution = coarsesolver(windowchunkproblem)
+                    U[n] = windowchunksolution(T[n])
                     skips[n] = true
                 end
             end
@@ -78,12 +88,15 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
 
         # time-parallel subroutine (parallel)
         windowproblem = copy(problem, υ0, τ0, τN)
-        windows[m] = parallelsolver(cache, windowproblem; mode)
+        windows[m] = parallelsolver(parallelcache, parallelsolution, windowproblem; mode)
 
         τJ = τN # update τJ for next iteration (next window or restart)
+        parallelsolution = NSDETimeParallel.TimeParallelSolution(problem, parallelsolver)
+        parallelsolution.lastiterate.U .= U
+        parallelsolution.lastiterate.T .= T
 
         # adaptive check
-        if adaptive == nothing
+        if isnothing(adaptive)
             τ0 += Δτ
             m += 1
             flag = true
@@ -149,8 +162,14 @@ function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProbl
     return solution
 end
 
-function (mowi::MoWi)(problem::AbstractInitialValueProblem)
+function (mowi::MoWi)(solution::MoWiSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
+    cache = MoWiCache(problem, mowi)
+    mowi(cache, solution, problem; mode)
+    return solution
+end
+
+function (mowi::MoWi)(problem::AbstractInitialValueProblem; mode::String="SERIAL")
     solution = MoWiSolution(problem, mowi)
-    mowi(solution, problem)
+    mowi(solution, problem; mode)
     return solution
 end
