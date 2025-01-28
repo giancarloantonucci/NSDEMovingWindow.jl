@@ -10,9 +10,9 @@ end
 AdaptiveMoWiParameters(; δτ⁻=0.5, δτ⁺=1.25, δΔτ⁻=0.25, δΔτ⁺=2.0, R=10, fineupdate=true) = AdaptiveMoWiParameters(δτ⁻, δτ⁺, δΔτ⁻, δΔτ⁺, R, fineupdate)
 
 increaseweights() = ()
-increasewindowlwngth() = ()
+increasewindowlength() = ()
 increaseshifting() = ()
 
 decreaseweights() = ()
-decreasewindowlwngth() = ()
+decreasewindowlength() = ()
 decreaseshifting() = ()

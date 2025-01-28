@@ -28,7 +28,7 @@ end
 function MoWiSolution(problem::AbstractInitialValueProblem, mowi::MoWi)
     @↓ (t0, tN) ← tspan = problem
     @↓ τ, Δτ = mowi
-    M = Δτ > 0 ? ceil(Int, (tN - τ) / Δτ) + 1 : 1 # Δτ == 0 => T = τ => M = 1
+    M = Δτ > 0 ? ceil(Int, (tN - t0 - τ) / Δτ) + 1 : 1 # Δτ = 0 => T = τ => M = 1
     windows = Vector{AbstractTimeParallelSolution}(undef, M)
     restarts = zeros(Integer, M)
     return MoWiSolution(windows, restarts)
