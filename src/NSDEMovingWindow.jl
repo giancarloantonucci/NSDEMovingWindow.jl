@@ -6,7 +6,7 @@ using ArrowMacros
 using RecipesBase
 
 include("abstract.jl")
-include("utils.jl")
+# include("utils.jl")
 include("mowi/adaptive.jl")
 include("mowi/constructor.jl")
 include("mowi/cache.jl")
@@ -26,7 +26,7 @@ export AbstractMovingWindowParameters
 
 export MoWi
 export MoWiSolution
-export AdaptiveMoWiParameters
+export AdaptiveMoWiParameters, StretchParameters, LeapParameters
 
 export MovingWindowSolution
 
