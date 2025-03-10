@@ -1,16 +1,16 @@
 using Documenter
-using MovingWindow
+using NSDEMovingWindow
 
 PAGES = ["Home" => "index.md"]
 
 makedocs(;
-    sitename = "MovingWindow.jl",
+    sitename = "NSDEMovingWindow.jl",
     format = Documenter.HTML(),
-    modules = [MovingWindow],
+    modules = [NSDEMovingWindow],
     pages = PAGES,
     authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
 )
 
 deploydocs(;
-    repo = "https://github.com/giancarloantonucci/MovingWindow.jl"
+    repo = "https://github.com/giancarloantonucci/NSDEMovingWindow.jl"
 )
