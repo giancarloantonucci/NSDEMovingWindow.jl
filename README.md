@@ -6,10 +6,16 @@ A Julia package implementing the Moving-Window (MoWi) algorithm.
 
 ## Installation
 
-This package is a [registered package](https://juliahub.com/ui/Search?q=NSDEMovingWindow&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
+<!-- This package is a [registered package](https://juliahub.com/ui/Search?q=NSDEMovingWindow&type=packages) compatible with Julia v1.10 and above. From the Julia REPL,
 
 ```
 ]add NSDEMovingWindow
+``` -->
+
+This package is compatible with Julia v1.10 and above. From the Julia REPL,
+
+```
+]add https://github.com/giancarloantonucci/NSDEMovingWindow.jl
 ```
 
 Read the [documentation](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/dev) for a complete overview of this package.
