@@ -23,8 +23,9 @@ jobs:
         run: |
           julia --project=docs -e '
             using Pkg
-            Pkg.develop(PackageSpec(url="https://github.com/giancarloantonucci/NSDEBase.jl"))
+            Pkg.rm("NSDEBase")
             Pkg.rm("NSDETimeParallel")
+            Pkg.develop(PackageSpec(url="https://github.com/giancarloantonucci/NSDEBase.jl"))
             Pkg.develop(PackageSpec(url="https://github.com/giancarloantonucci/NSDETimeParallel.jl"))
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.resolve()
