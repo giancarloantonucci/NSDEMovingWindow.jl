@@ -28,8 +28,8 @@ end
 
 function MoWi(parallelsolver::AbstractTimeParallelSolver; adaptive::Union{AbstractAdaptiveMoWiParameters, Nothing}=nothing, τ::Real, Δτ::Real=τ)
     @↓ N = parallelsolver.parameters
-    if Δτ < τ/N || Δτ > τ
-        error("Select τ/N ≤ Δτ ≤ τ.")
+    if Δτ > τ
+        error("τ = $τ and Δτ = $(Δτ). Please, select Δτ ≤ τ.")
     end
     return MoWi(parallelsolver, adaptive, τ, Δτ)
 end

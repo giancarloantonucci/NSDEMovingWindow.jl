@@ -1,75 +1,90 @@
 function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractInitialValueProblem, mowi::MoWi; kwargs...)
-    
+    # Extract parameters
+    @↓ windowboundaries, windowproblem, windowcache = cache
+    τ0, τJ, τN = windowboundaries
+    @↓ makeGs, Uₘ ← U, Tₘ ← T = windowcache
     @↓ parallelsolver, adaptive, τ, Δτ = mowi
     @↓ finesolver, coarsesolver, parameters, tolerance = parallelsolver
     @↓ N = parameters
     @↓ ϵ = tolerance
     @↓ δτ⁻, δτ⁺, R, fineupdate = adaptive
-    @↓ τ0, τN, τJ = cache
     @↓ windows, restarts = solution
     @↓ (t0, tN) ← tspan = problem
 
+    # Initialize step sizes
     @↓ hF ← h = finesolver.stepsize
+    # hF_tmp = hF
     @↓ hG ← h = coarsesolver.stepsize
-    hF₀ = hF
-    hG₀ = hG
+    # hG_tmp = hG
 
-    M = M₀ = length(windows)
+    # Initialize window count
+    M = M_tmp = length(windows)
 
-    # main loop
+    # Main-loop variables
     needsrestart = false
-    τ0_old = τ0
+    τ0_tmp = τ0
+
+    # Main loop
     m = 1
     while τN < tN
-
+        # Resize storage if needed
         if m > M
-            append!(windows, Vector{AbstractTimeParallelSolution}(undef, M₀)) # TODO: Vector{typeof(windows[m])}(undef, M₀)
-            append!(restarts, zeros(M₀)) # TODO: Vector{typeof(restarts[m])}(undef, M₀)
-            M += M₀
+            append!(windows, Vector{AbstractTimeParallelSolution}(undef, M_tmp)) # TODO: Vector{typeof(windows[m])}(undef, M_tmp)
+            append!(restarts, zeros(M_tmp)) # TODO: Vector{typeof(restarts[m])}(undef, M_tmp)
+            M += M_tmp
         end
 
+        # Update window boundaries
         if needsrestart
-            τ0 = τ0_old + Δτ
+            τ0 = τ0_tmp
             τN = τ0 + τ
-        end
-
-        if m > 1 && !needsrestart
-            τ0 = τ0_old + Δτ
+        elseif !needsrestart && m > 1
+            τ0 = τ0_tmp + Δτ
             τJ = τN
             τN = τ0 + τ
         end
-
         println("window # $m: τ0 = $τ0, τJ = $τJ, τN = $τN")
 
-        windowproblem = copy(problem, τ0, τN) # u0 here is the wrong one; careful
+        # Update window problem
+        tspan = (τ0, τN)
+        @↑ windowproblem = tspan
 
-        if m > 1
-            cache = NSDETimeParallel.TimeParallelCache(windowproblem, parallelsolver)
-            @↓ makeGs, Uₘ ← U, Tₘ ← T = cache
+        if m > 1 || needsrestart
+            # Compute Tₘ
+            for n = 1:N+1
+                Tₘ[n] = (N - n + 1) / N * τ0 + (n - 1) / N * τN # stable sum
+            end
 
+            # Compute Uₘ
             for n = 1:N
-                # between τ0 and τJ copy parallelsolution
-                if τ0 ≤ Tₘ[n] ≤ τJ
+                tₙ = Tₘ[n]
+                if τ0 ≤ tₙ ≤ τJ # between τ0 and τJ copy parallelsolution
                     if needsrestart
-                        Uₘ[n] = windows[m](Tₘ[n])
+                        Uₘ[n] = windows[m](tₙ)
                     else
-                        Uₘ[n] = windows[m-1](Tₘ[n])
+                        Uₘ[n] = windows[m-1](tₙ)
                     end
                     makeGs[n] = false
-                end
-
-                # between τJ and τN coarse guess inside parareal
-                if τJ < Tₘ[n] ≤ τN
+                elseif τJ < Tₘ[n] ≤ τN # between τJ and τN coarse guess inside parareal
                     makeGs[n] = true
                 end
             end
         end
 
-        windows[m] = solve(windowproblem, parallelsolver; kwargs...)
+        # Solve window problem
+        if m == 1 && !needsrestart
+            windows[m] = parallelsolver(windowproblem; kwargs...)
+        else
+            windows[m] = parallelsolver(windowcache, windowproblem; kwargs...)
+        end
 
+        # Check error and decide whether to restart
+        τ0_tmp = τ0
         if windows[m].errors[end] > ϵ && restarts[m] < R
             needsrestart = true
+            restarts[m] += 1
 
+            # Update adaptive paramters
             τ *= δτ⁻
             Δτ *= δτ⁻
             if fineupdate
@@ -78,12 +93,11 @@ function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractIniti
             end
             hG = max(hG * δτ⁻, hF)
             @↑ coarsesolver.stepsize = h ← hG
-
-            restarts[m] += 1
         else
             needsrestart = false
-            τ0_old = τ0
+            m += 1
 
+            # Update adaptive paramters
             τ *= δτ⁺
             Δτ *= δτ⁺
             if fineupdate
@@ -92,14 +106,10 @@ function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractIniti
             end
             hG *= δτ⁺
             @↑ coarsesolver.stepsize = h ← hG
-
-            # move on
-            m += 1
         end
-
     end
 
+    # Resize final storage
     resize!(windows, m-1)
     resize!(restarts, m-1)
-
 end
