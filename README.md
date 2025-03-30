@@ -1,6 +1,6 @@
-# MovingWindow
+# NSDEMovingWindow.jl
 
-A Julia package implementing the Moving-Window (MoWi) algorithm.
+A Julia package implementing the moving-window (MoWi) algorithm.
 
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDEMovingWindow.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDEMovingWindow.jl)
 
