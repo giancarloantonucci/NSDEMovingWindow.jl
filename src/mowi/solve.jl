@@ -5,8 +5,8 @@ function (mowi::MoWi)(cache::MoWiCache, solution::MoWiSolution, problem::Abstrac
         mowi_1(cache, solution, problem, mowi)
     elseif isstrategy == 2
         mowi_2(cache, solution, problem, mowi)
-    # elseif isstrategy == 3
-    #     mowi_3(cache, solution, problem, mowi)
+    elseif isstrategy == 3
+        mowi_3(cache, solution, problem, mowi)
     end
     return solution
 end

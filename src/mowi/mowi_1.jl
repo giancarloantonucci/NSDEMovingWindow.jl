@@ -26,7 +26,8 @@ function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractIniti
 
     # Main loop
     m = 1
-    while τN < tN
+    stillnan = false
+    while τJ < tN || stillnan
         # Resize storage if needed
         if m > M
             append!(windows, Vector{AbstractTimeParallelSolution}(undef, M_tmp)) # TODO: Vector{typeof(windows[m])}(undef, M_tmp)
@@ -80,13 +81,20 @@ function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractIniti
 
         # Check error and decide whether to restart
         τ0_tmp = τ0
-        if windows[m].errors[end] > ϵ && restarts[m] < R
+
+        if (windows[m].errors[end] > ϵ || isnan(windows[m].errors[end])) && restarts[m] < R
+            if isnan(windows[m].errors[end])
+                stillnan = true
+            else
+                stillnan = false
+            end
+
             needsrestart = true
             restarts[m] += 1
 
             # Update adaptive paramters
+            Δτ = min(Δτ * δτ⁻, τ)
             τ *= δτ⁻
-            Δτ *= δτ⁻
             if fineupdate
                 hF *= δτ⁻
                 @↑ finesolver.stepsize = h ← hF
@@ -94,12 +102,13 @@ function mowi_1(cache::MoWiCache, solution::MoWiSolution, problem::AbstractIniti
             hG = max(hG * δτ⁻, hF)
             @↑ coarsesolver.stepsize = h ← hG
         else
+            stillnan = false
             needsrestart = false
             m += 1
 
             # Update adaptive paramters
+            Δτ = min(Δτ * δτ⁺, τ)
             τ *= δτ⁺
-            Δτ *= δτ⁺
             if fineupdate
                 hF *= δτ⁺
                 @↑ finesolver.stepsize = h ← hF
