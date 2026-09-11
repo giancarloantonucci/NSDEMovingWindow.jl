@@ -1,20 +1,21 @@
-struct MoWiCache{windowboundaries_T<:(Tuple{ℝ,ℝ,ℝ} where ℝ<:Real), windowproblem_T<:AbstractInitialValueProblem, windowcache_T<:NSDETimeParallel.AbstractTimeParallelCache} <: AbstractMovingWindowCache
-    windowboundaries::windowboundaries_T
+# src/mowi/cache.jl
+
+"""
+    MoWiCache <: AbstractMovingWindowCache
+
+One window problem and one time-parallel cache, reused for every window: the
+skeleton re-targets them with [`NSDETimeParallel.shiftwindow!`](@ref) as the
+window moves.
+"""
+struct MoWiCache{windowproblem_T<:AbstractInitialValueProblem, windowcache_T<:NSDETimeParallel.AbstractTimeParallelCache} <: AbstractMovingWindowCache
     windowproblem::windowproblem_T
     windowcache::windowcache_T
-    # τ0::AbstractFloat
-    # τN::AbstractFloat
-    # τJ::AbstractFloat
 end
 
 function MoWiCache(problem::AbstractInitialValueProblem, mowi::MoWi)
     @↓ (t0, tN) ← tspan = problem
     @↓ parallelsolver, τ = mowi
-    # τJ = T_{N-ΔN}^{m-1} = T_{ΔN}^m
-    τJ = τ0 = t0
-    τN = τ0 + τ
-    windowboundaries = (τ0, τJ, τN)
-    windowproblem = copy(problem, τ0, τN)
+    windowproblem = copy(problem, t0, t0 + τ)
     windowcache = NSDETimeParallel.TimeParallelCache(windowproblem, parallelsolver)
-    return MoWiCache(windowboundaries, windowproblem, windowcache)
+    return MoWiCache(windowproblem, windowcache)
 end
