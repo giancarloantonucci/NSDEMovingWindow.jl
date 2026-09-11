@@ -4,7 +4,7 @@
     MoWiCache <: AbstractMovingWindowCache
 
 One window problem and one time-parallel cache, reused for every window: the
-skeleton re-targets them with [`NSDETimeParallel.shiftwindow!`](@ref) as the
+skeleton re-targets them with `NSDETimeParallel.shiftwindow!` as the
 window moves.
 """
 struct MoWiCache{windowproblem_T<:AbstractInitialValueProblem, windowcache_T<:NSDETimeParallel.AbstractTimeParallelCache} <: AbstractMovingWindowCache
