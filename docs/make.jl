@@ -1,29 +1,21 @@
 using Documenter
-using DocumenterInterLinks
-using NSDEBase, NSDETimeParallel, NSDEMovingWindow
+using NSDEMovingWindow
 
-PAGES = ["Home" => "index.md"]
-
-links = InterLinks(
-    "NSDEBase" => (
-        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/",
-        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/objects.inv"
-    ),
-    "NSDETimeParallel" => (
-        "https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev/",
-        "https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev/objects.inv"
-    )
-)
+PAGES = [
+    "Home" => "index.md",
+    "Strategies" => "strategies.md",
+    "API" => "api.md"
+]
 
 makedocs(;
     sitename = "NSDEMovingWindow.jl",
     format = Documenter.HTML(),
     modules = [NSDEMovingWindow],
     pages = PAGES,
-    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>",
-    plugins = [links],
+    checkdocs = :exports, # every export must carry a docstring, or the build fails
+    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
 )
 
 deploydocs(;
-    repo = "https://github.com/giancarloantonucci/NSDEMovingWindow.jl"
+    repo = "github.com/giancarloantonucci/NSDEMovingWindow.jl.git"
 )
