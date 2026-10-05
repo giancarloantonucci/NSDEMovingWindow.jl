@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The declared minimum (Project.toml `julia = "1.6"`, verified 1.6–1.13)
+        # The declared minimum (Project.toml `julia = "1.6"`) is
         # spelled out so it does not move with the LTS label, plus current stable.
         version: ['1.6', '1']
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -52,3 +52,5 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+

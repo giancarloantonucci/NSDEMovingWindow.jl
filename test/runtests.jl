@@ -30,7 +30,7 @@ end
 @testset "NSDEMovingWindow" begin
 
 @testset "Aqua" begin
-    Aqua.test_all(NSDEMovingWindow; persistent_tasks=false) # off until NSDETimeParallel is in General: the check resolves from registries only
+    Aqua.test_all(NSDEMovingWindow; piracies=(; treat_as_own=[NSDEMovingWindow.RecipesBase.recipetype]))
 end
 
 @testset "construction validation" begin
@@ -290,3 +290,5 @@ end
 
 
 end # outer testset
+
+

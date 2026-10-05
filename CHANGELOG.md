@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+- Lower the declared Julia minimum from 1.10 to 1.6, matching the supported
+  source and README. The full suite passes on Julia 1.6.7 and 1.10.10.
+- Standard-library compatibility bounds admit the unversioned stdlibs used in
+  Julia 1.6 test environments.
+
+### Tests and maintenance
+- Re-enable Aqua's persistent-task check following package registration.
+- Use the same narrow RecipesBase.recipetype exemption as the other packages
+  when checking recipe methods for type piracy.
+- Refresh workflow comments to describe registered dependencies.
+
 ## 0.2.0
 
 Requires NSDEBase 0.3.1, NSDERungeKutta 0.2 and NSDETimeParallel 0.2.
@@ -24,3 +38,5 @@ Requires NSDEBase 0.3.1, NSDERungeKutta 0.2 and NSDETimeParallel 0.2.
   `ensemblemean`, `ensemblevariance`, `ensemblesem`.
 - Strategies page and API page in the docs; Aqua in the test suite; tests
   with an implicit coarse solver.
+
+

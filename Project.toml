@@ -1,6 +1,6 @@
 name = "NSDEMovingWindow"
 uuid = "90d73e86-9dda-4e5f-94e6-0228ced3acd1"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Giancarlo A. Antonucci"]
 
 [deps]
@@ -13,14 +13,14 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 [compat]
 Aqua = "0.8"
 ArrowMacros = "0.2"
-LinearAlgebra = "1"
+LinearAlgebra = "<0.0.1, 1"
 NSDEBase = "0.3.1"
 NSDERungeKutta = "0.2"
 NSDETimeParallel = "0.2"
 RecipesBase = "1"
 Reexport = "1"
-Test = "1"
-julia = "1.10"
+Test = "<0.0.1, 1"
+julia = "1.6"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -32,3 +32,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Aqua", "LinearAlgebra", "NSDEBase", "NSDERungeKutta", "RecipesBase", "Test"]
+
+
