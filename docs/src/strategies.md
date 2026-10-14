@@ -19,7 +19,8 @@ coarse step by `δτ⁻`; on success they grow by `δτ⁺`. The number of chunk
 fixed, so the coarse step scales with τ. The fine step stays **fixed** by
 default — changing it can alter the resolved physics — unless
 `fineupdate = true`, which reproduces the idealised model of the convergence
-analysis rather than the practical scheme.
+analysis rather than the practical scheme. The fine step then scales with τ, so
+it stops shrinking when τ reaches its floor.
 
 ## Leaping and hopping: `LeapParameters` (AMoWi-2)
 

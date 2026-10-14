@@ -30,16 +30,19 @@ adapt_success!(::Nothing, state, parallelsolver) = parallelsolver
 function adapt_failure!(p::StretchParameters, state, parallelsolver)
     @↓ δτ⁻, fineupdate = p
     hF = nominal_step(parallelsolver.finesolver)
-    if fineupdate
-        hF *= δτ⁻
-        parallelsolver = remake(
-            parallelsolver; finesolver=withstepsize(parallelsolver.finesolver, hF)
-        )
-    end
     # The floors are absolute (set when MoWiState is built): under persistent
     # failure τ must not decay to zero and the advance per window must not decay
     # to one fine step.
     τnew = max(state.τ * δτ⁻, state.τmin)
+    if fineupdate
+        # The model keeps h_F ∝ τ, so the fine step shrinks only as far as τ
+        # does: once τ sits on its floor, a restart leaves h_F alone instead of
+        # shrinking it, and the work per window, without bound.
+        hF *= state.τ * δτ⁻ >= state.τmin ? δτ⁻ : oftype(hF, min(τnew / state.τ, 1))
+        parallelsolver = remake(
+            parallelsolver; finesolver=withstepsize(parallelsolver.finesolver, hF)
+        )
+    end
     state.Δτ = clamp(state.Δτ * δτ⁻, state.Δτmin, τnew)
     state.τ = τnew
     parallelsolver = remake(

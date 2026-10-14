@@ -54,6 +54,10 @@ Requires NSDEBase 0.4 and NSDETimeParallel 0.3; the tests use NSDERungeKutta
   Float64, keeping BigFloat precision, instead of failing with an
   `ArgumentError` for a Float32 span and window length, or rounding BigFloat
   window lengths to Float64.
+- Stretch with `fineupdate=true` stops shrinking the fine step once the window
+  length reaches its floor. Before, every further restart halved it again, so
+  persistently failing windows could need millions of fine steps and run out of
+  memory.
 
 ## 0.2.1
 

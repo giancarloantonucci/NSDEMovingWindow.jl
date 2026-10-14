@@ -138,3 +138,26 @@ end
         p = NSDEMovingWindow.adapt_success!(ZoomParameters(), state, next)
     end
 end
+
+@testset "Stretch fineupdate: the fine step stops at the window floor" begin
+    # Unit level: h_F follows τ down to its floor and no further.
+    parareal = good_parareal()
+    h = parareal.finesolver.stepsize.h
+    state = NSDEMovingWindow.MoWiState(1.0, 0.5, 0.25, 0.5)
+    stretch = StretchParameters(δτ⁻=0.5, fineupdate=true)
+    for _ in 1:20
+        parareal = NSDEMovingWindow.adapt_failure!(stretch, state, parareal)
+    end
+    @test state.τ == 0.5
+    @test parareal.finesolver.stepsize.h == h / 2
+    # End to end: persistently failing windows keep h_F ≥ h·τmin/τ₀, here with
+    # τmin = τ₀/N.
+    mowi = MoWi(bad_parareal(); τ=1.0, Δτ=0.5, adaptive=StretchParameters(R=3, fineupdate=true))
+    solution = @test_logs (:warn, r"accepted WITHOUT convergence") match_mode=:any solve(
+        problem, mowi
+    )
+    N = mowi.parallelsolver.parameters.N
+    hF = [w.lastiterate[1].t[2] - w.lastiterate[1].t[1] for w in solution.windows]
+    @test any(>(0), solution.restarts)
+    @test minimum(hF) ≥ finesolver.stepsize.h / N * (1 - 1e-12)
+end
