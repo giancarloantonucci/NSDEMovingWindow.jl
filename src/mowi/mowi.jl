@@ -200,11 +200,12 @@ function mowi!(
         endtol = max(time_roundoff, 1e-9 * state.τ)
         τN = nominal_end >= tN - endtol ? W(tN) : nominal_end
         duration = (τN == nominal_end ? state.τ : τN - τ0) / N
-        if m > M # grow storage under adaptive shrinking
-            append!(windows, Vector{AbstractTimeParallelSolution}(undef, M₀))
-            append!(restarts, zeros(Int, M₀))
-            append!(clipped, falses(M₀))
-            M += M₀
+        if m > M # grow storage under adaptive shrinking, or from empty storage
+            grow = max(M₀, 1)
+            append!(windows, Vector{AbstractTimeParallelSolution}(undef, grow))
+            append!(restarts, zeros(Int, grow))
+            append!(clipped, falses(grow))
+            M += grow
         end
         clipped[m] = nominal_end > tN + endtol
         verbose && @info "MoWi window" m τ0 τJ τN restarts = restarts[m]

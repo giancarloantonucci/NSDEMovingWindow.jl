@@ -82,3 +82,30 @@ end
     @test cache.windowcache.chunkproblems[1].rhs === q.rhs
     @test_throws ArgumentError solver(cache, result, IVP((u, t) -> -u, [0.5], (0.0, 3.0)))
 end
+
+@testset "An empty MoWiSolution grows" begin
+    mowi = MoWi(good_parareal(); τ=1.0, Δτ=0.5)
+    solution = MoWiSolution(AbstractTimeParallelSolution[], Int[])
+    mowi(solution, problem)
+    fresh = solve(problem, mowi)
+    @test solution.status == :converged
+    @test length(solution) == length(fresh) == 5
+    @test solution.restarts == fresh.restarts
+    @test solution.clipped == fresh.clipped
+    @test [boundaryvalues(w.lastiterate) for w in solution.windows] == [boundaryvalues(w.lastiterate) for w in fresh.windows]
+end
+
+@testset "An unstarted MoWiSolution refuses to be read" begin
+    mowi = MoWi(good_parareal(); τ=1.0, Δτ=0.5)
+    unstarted = MoWiSolution(problem, mowi)
+    @test_throws ArgumentError unstarted(0.5)
+    @test_throws ArgumentError flatten(unstarted)
+    @test_throws ArgumentError ensemblemean(unstarted)
+    @test_throws ArgumentError ensemblevariance(unstarted)
+    @test_throws ArgumentError ensemblesem(unstarted)
+    @test_throws ArgumentError MoWiSolution(AbstractTimeParallelSolution[], Int[])(0.5)
+    mowi(unstarted, problem)
+    @test unstarted(0.5) == solve(problem, mowi)(0.5)
+    # Windows supplied by the caller count as computed.
+    @test MoWiSolution(unstarted.windows, unstarted.restarts)(0.5) == unstarted(0.5)
+end

@@ -58,6 +58,10 @@ Requires NSDEBase 0.4 and NSDETimeParallel 0.3; the tests use NSDERungeKutta
   length reaches its floor. Before, every further restart halved it again, so
   persistently failing windows could need millions of fine steps and run out of
   memory.
+- A `MoWiSolution` built from empty window and restart vectors grows as the
+  run needs, instead of failing with a `BoundsError`. Evaluating, flattening or
+  taking ensemble statistics of a solution whose windows were never computed
+  raises an `ArgumentError` instead of an `UndefRefError`.
 
 ## 0.2.1
 

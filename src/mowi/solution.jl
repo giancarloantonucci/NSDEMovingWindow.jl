@@ -49,15 +49,27 @@ function windowspan(window::AbstractTimeParallelSolution)
     return (window.lastiterate[1].t[1], window.lastiterate[end].t[end])
 end
 
+# A solution allocated by `MoWiSolution(problem, mowi)` holds placeholders until
+# a run fills them: refuse to read it rather than fail on an undefined reference.
+function checkcomputed(solution::MoWiSolution)
+    windows = solution.windows
+    isempty(windows) && throw(ArgumentError("solution contains no windows"))
+    all(m -> isassigned(windows, m), eachindex(windows)) ||
+        throw(ArgumentError("solution has windows that were never computed; run the solver first"))
+    return nothing
+end
+
 """
     (solution::MoWiSolution)(tₚ::Real)
 
 evaluates the latest window covering `tₚ` (clamped at the ends). A diagnostic
 and plotting helper: windows overlap and may disagree, so this is not
 guaranteed to be a single continuous trajectory. For statistics use
-[`ensemblemean`](@ref) and friends instead.
+[`ensemblemean`](@ref) and friends instead. A solution that has not been run
+raises an `ArgumentError`.
 """
 function (solution::MoWiSolution)(tₚ::Real)
+    checkcomputed(solution)
     for m in length(solution):-1:1
         ta, tb = windowspan(solution[m])
         if ta ≤ tₚ ≤ tb
@@ -141,6 +153,7 @@ function ensemblesamples(solution::MoWiSolution, g, samples::Integer; include_cl
     )
     samples >= 1 || throw(ArgumentError("samples must be positive"))
     isempty(solution.windows) && throw(ArgumentError("ensemble contains no windows"))
+    checkcomputed(solution)
     windows = include_clipped ? solution.windows : solution.windows[.!solution.clipped]
     isempty(windows) && throw(
         ArgumentError(
@@ -212,6 +225,7 @@ does not justify attractor statistics or a single continuous trajectory. For
 relative-time ensemble summaries, use [`ensemblemean`](@ref) and friends.
 """
 function NSDETimeParallel.flatten(solution::MoWiSolution)
+    checkcomputed(solution)
     u, t = flatten(solution[1])
     for m in 2:length(solution)
         uₘ, tₘ = flatten(solution[m])
