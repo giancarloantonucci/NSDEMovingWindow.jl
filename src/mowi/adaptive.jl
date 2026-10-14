@@ -1,11 +1,10 @@
 # src/mowi/adaptive.jl
 #
-# The adaptive strategies of AMoWi (thesis, Ch. 5). The parameter type IS the
+# The adaptive strategies of AMoWi. The parameter type IS the
 # strategy: pass one of these as `adaptive` to `MoWi` and the matching policy
 # runs — no strategy integers. Each acts through two hooks, `adapt_failure!`
 # (on a window restart) and `adapt_success!` (on acceptance), defined next to
-# the window skeleton in `mowi.jl`. The unexplored combined strategy (thesis
-# §5.4, future work) has no type here on purpose.
+# the window loop in `mowi.jl`. Combined strategies are not implemented.
 
 """
     StretchParameters <: AbstractAdaptiveMoWiParameters
@@ -15,25 +14,32 @@ the restart shrinks τ, Δτ and the coarse step by `δτ⁻` (τ floored at `N�
 by `δτ⁺`. The number of chunks N is fixed, so the coarse step scales with τ.
 The fine step stays FIXED by default — changing it can alter the resolved
 physics — unless `fineupdate = true`, which reproduces the idealized model
-used in the convergence analysis (thesis Thm. 5.1) rather than the practical
+used in the convergence analysis rather than the practical
 scheme.
 
 # Constructors
 ```julia
 StretchParameters(; δτ⁻=0.5, δτ⁺=1.25, R=10, fineupdate=false)
 ```
-Thesis experiments put the sweet spot at `δτ⁺ ∈ [1.25, 1.75]`, with a
-performance cliff past 2; sensitivity to `δτ⁻` is mild. `R` caps restarts per
-window.
+`0 < δτ⁻ < 1`, `δτ⁺ ≥ 1`, and `R ≥ 0` are required. All factors must be finite.
 """
-struct StretchParameters{δτ⁻_T<:Real, δτ⁺_T<:Real, R_T<:Integer, fineupdate_T<:Bool} <: AbstractAdaptiveMoWiParameters
+struct StretchParameters{δτ⁻_T<:Real,δτ⁺_T<:Real,R_T<:Integer,fineupdate_T<:Bool} <:
+       AbstractAdaptiveMoWiParameters
     δτ⁻::δτ⁻_T
     δτ⁺::δτ⁺_T
     R::R_T
     fineupdate::fineupdate_T
+    function StretchParameters(δτ⁻::Real, δτ⁺::Real, R::Integer, fineupdate::Bool)
+        isfinite(δτ⁻) && 0 < δτ⁻ < 1 || throw(ArgumentError("δτ⁻ must lie in (0, 1)"))
+        isfinite(δτ⁺) && δτ⁺ >= 1 || throw(ArgumentError("δτ⁺ must be finite and at least 1"))
+        R >= 0 || throw(ArgumentError("R must be nonnegative"))
+        return new{typeof(δτ⁻),typeof(δτ⁺),typeof(R),typeof(fineupdate)}(δτ⁻, δτ⁺, R, fineupdate)
+    end
 end
 
-StretchParameters(; δτ⁻::Real=0.5, δτ⁺::Real=1.25, R::Integer=10, fineupdate::Bool=false) = StretchParameters(δτ⁻, δτ⁺, R, fineupdate)
+function StretchParameters(; δτ⁻::Real=0.5, δτ⁺::Real=1.25, R::Integer=10, fineupdate::Bool=false)
+    return StretchParameters(δτ⁻, δτ⁺, R, fineupdate)
+end
 
 """
     LeapParameters <: AbstractAdaptiveMoWiParameters
@@ -46,17 +52,23 @@ information. On failure the shift shrinks by `δΔτ⁻` — floored at one chun
 length `τ/N`, a termination guard — and the window is re-attempted at the
 reduced shift. The FIRST window is exempt from restarts:
 the strategy leaves τ alone, so if window 1 cannot converge, no shift policy
-can save it (thesis §5.2) — pick τ with care.
+can save it — pick τ with care.
 
 # Constructors
 ```julia
 LeapParameters(; δΔτ⁻=0.25, δΔτ⁺=2.0, R=10)
 ```
 """
-struct LeapParameters{δΔτ⁻_T<:Real, δΔτ⁺_T<:Real, R_T<:Integer} <: AbstractAdaptiveMoWiParameters
+struct LeapParameters{δΔτ⁻_T<:Real,δΔτ⁺_T<:Real,R_T<:Integer} <: AbstractAdaptiveMoWiParameters
     δΔτ⁻::δΔτ⁻_T
     δΔτ⁺::δΔτ⁺_T
     R::R_T
+    function LeapParameters(δΔτ⁻::Real, δΔτ⁺::Real, R::Integer)
+        isfinite(δΔτ⁻) && 0 < δΔτ⁻ < 1 || throw(ArgumentError("invalid failure factor δΔτ⁻"))
+        isfinite(δΔτ⁺) && δΔτ⁺ >= 1 || throw(ArgumentError("invalid success factor δΔτ⁺"))
+        R >= 0 || throw(ArgumentError("R must be nonnegative"))
+        return new{typeof(δΔτ⁻),typeof(δΔτ⁺),typeof(R)}(δΔτ⁻, δΔτ⁺, R)
+    end
 end
 
 LeapParameters(; δΔτ⁻::Real=0.25, δΔτ⁺::Real=2.0, R::Integer=10) = LeapParameters(δΔτ⁻, δΔτ⁺, R)
@@ -65,35 +77,26 @@ LeapParameters(; δΔτ⁻::Real=0.25, δΔτ⁺::Real=2.0, R::Integer=10) = Lea
     ZoomParameters <: AbstractAdaptiveMoWiParameters
 
 AMoWi-3: adapt the base weight `w` of the WEIGHTED proximity function with τ
-and Δτ fixed. The action is multiplicative and per restart (thesis Thm. 5.3:
+and Δτ fixed. The action is multiplicative and per restart (
 after ι restarts the weight is `δ^ι w`): a failed window loosens the measure
 (`w ← δw⁻·w`, `δw⁻ > 1` — larger `w` makes the `w^{-Δt}` weights decay
 faster, so discontinuities further along the window count for less — "zoom
 out"); a success tightens it (`w ← δw⁺·w`, `δw⁺ < 1`, clamped at `w ≥ 1`
-inside `ψ₂` — "zoom in"). Requires the parallel solver's tolerance to use a
-WEIGHTED error function (`ψ₂`); with the unweighted `ψ₁` zooming would be a
-silent no-op, so `MoWi` refuses that combination at construction. It likewise
-requires a FROZEN base weight: `Weights(updatew = true)` re-measures `w`
-every iteration and floors it at the measured rate, silently undoing every
-zoom-in, so `MoWi` refuses that pairing too — measure Λ once with a probe
-solve and pass `Weights(w = exp(Λ))`.
-
-# Constructors
-```julia
-ZoomParameters(; δw⁻=2.0, δw⁺=0.25, R=10)
-```
+in the stored configuration). Requires
+`WeightedDefect(weight=FixedWeight(w))`: changing weights within a window
+would overwrite the zoom adjustment. Use a probe run to measure a suitable
+base, then construct a fixed-weight criterion for Zoom.
 """
-struct ZoomParameters{δw⁻_T<:Real, δw⁺_T<:Real, R_T<:Integer} <: AbstractAdaptiveMoWiParameters
+struct ZoomParameters{δw⁻_T<:Real,δw⁺_T<:Real,R_T<:Integer} <: AbstractAdaptiveMoWiParameters
     δw⁻::δw⁻_T
     δw⁺::δw⁺_T
     R::R_T
+    function ZoomParameters(δw⁻::Real, δw⁺::Real, R::Integer)
+        isfinite(δw⁻) && δw⁻ > 1 || throw(ArgumentError("invalid failure factor δw⁻"))
+        isfinite(δw⁺) && 0 < δw⁺ <= 1 || throw(ArgumentError("invalid success factor δw⁺"))
+        R >= 0 || throw(ArgumentError("R must be nonnegative"))
+        return new{typeof(δw⁻),typeof(δw⁺),typeof(R)}(δw⁻, δw⁺, R)
+    end
 end
-
-# @! Adaptive per-window iteration BUDGETS (the AMoWi-3 ↔ budget coupling of
-# @! rem:amowi3_limitation) are not expressible today: PararealParameters.K is
-# @! fixed for the whole run. The MoWA-era precedent (`Budget(Kmax)` on the
-# @! window driver) says where the feature belongs if built — MoWi-LEVEL
-# @! state adapted by the strategy hooks, never a solver parameter — so the
-# @! budget can move with the window the way Δτ and w already do.
 
 ZoomParameters(; δw⁻::Real=2.0, δw⁺::Real=0.25, R::Integer=10) = ZoomParameters(δw⁻, δw⁺, R)

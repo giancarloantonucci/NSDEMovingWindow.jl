@@ -1,6 +1,6 @@
 @recipe function f(solution::MoWiSolution)
     @↓ windows = solution
-    for m = 1:length(windows)
+    for m in 1:length(windows)
         @series begin
             if m != 1
                 label := ""
@@ -17,8 +17,11 @@ end
 @recipe function f(wrapper::NSDEBase._PhasePlot{<:MoWiSolution})
     @↓ solution ← plottable = wrapper
     @↓ windows = solution
-    for m = 1:length(windows)
-        @series NSDEBase._PhasePlot(solution[m])
+    for m in 1:length(windows)
+        @series begin
+            m == 1 || (label := "")
+            NSDEBase._PhasePlot(solution[m])
+        end
     end
 end
 
@@ -31,16 +34,21 @@ end
     yticks --> 0:1000
     @↓ solution ← plottable = wrapper
     @↓ windows, restarts = solution
-    @series begin
-        if haskey(plotattributes, :label)
-            label := plotattributes[:label][1]
+    given = get(plotattributes, :label, nothing)
+    labelfor(i) =
+        if given === nothing
+            (i == 1 ? "iterations" : "restarts")
+        elseif given isa Union{AbstractString,Symbol}
+            (i == 1 ? string(given) : "")
+        else
+            (i <= length(given) ? given[i] : "")
         end
-        [length(solution[m].errors) for m = 1:length(windows)]
+    @series begin
+        label := labelfor(1)
+        [length(solution[m].errors) for m in 1:length(windows)]
     end
     @series begin
-        if haskey(plotattributes, :label)
-            label := plotattributes[:label][2]
-        end
+        label := labelfor(2)
         restarts
     end
 end

@@ -1,6 +1,6 @@
 # Strategies
 
-The window loop is written once; the strategies differ only in what they adjust when a window fails to converge (a restart) or is accepted. The `adaptive` parameter type selects the strategy — there are no strategy integers. Every strategy caps restarts per window at its `R`; a window that exhausts the budget is accepted with a warning.
+The window loop is written once; the strategies differ only in what they adjust when a window fails to converge (a restart) or is accepted. The `adaptive` parameter type selects the strategy — there are no strategy integers. Every strategy caps restarts per window at its `R`; a finite window that exhausts the budget advances with a warning, while an unrecovered nonfinite window stops the run.
 
 ## Fixed MoWi (`adaptive = nothing`)
 
@@ -16,27 +16,70 @@ Adapt the shift with the window length fixed. On success the next shift grows, c
 
 ## Zooming in and out: `ZoomParameters` (AMoWi-3)
 
-Adapt the base weight of the **weighted** proximity function `ψ₂`, multiplicatively per restart: a failed window loosens the measure (`w ← δw⁻ · w`, discounting discontinuities further along the window), a success tightens it. Two things are required and **refused at construction** when absent:
+Adapt the base of `WeightedDefect` multiplicatively between attempts. Zoom
+requires `FixedWeight`: a same-chunk or neighbouring-chunk updater would choose
+the weight independently of the window strategy. The adapted settings are local
+to one `solve`; reusing the `MoWi` object starts from its configured settings.
 
-1. the parallel solver's `Tolerance` must use `ψ₂` — with the unweighted `ψ₁` zooming is a silent no-op;
-2. the base weight must be **frozen** — `Weights(updatew = true)` re-measures `w` every iteration and floors it at the measured rate, silently undoing every zoom-in.
-
-The recipe: measure once with a probe, then freeze —
+A probe can estimate the initial base explicitly:
 
 ```julia
-probe = Parareal(fine, coarse; parameters = params,
-                 tolerance = Tolerance(ϵ = ϵ, ψ = ψ₂, weights = Weights(updatew = true)))
-solve(copy(problem, u0, t0, t0 + τ), probe)          # one representative window
-mowi = MoWi(Parareal(fine, coarse; parameters = params,
-                     tolerance = Tolerance(ϵ = ϵ, ψ = ψ₂,
-                                           weights = Weights(w = probe.tolerance.weights.w)));
-            τ, Δτ, adaptive = ZoomParameters())
+probe = Parareal(fine, coarse; N=32,
+    criterion=WeightedDefect(ϵ=1e-9, weight=SecantWeight()))
+measured = solve(remake(problem; tspan=(0.0, τ)), probe)
+w0 = last(measured.diagnostics.weights)
+fixed = remake(probe; criterion=WeightedDefect(ϵ=1e-9, weight=FixedWeight(w0)))
+mowi = MoWi(fixed; τ, Δτ, adaptive=ZoomParameters())
 ```
+
+The state carried between windows is an explicit replacement configuration;
+neither the probe nor the caller's solver is mutated. Stretch similarly replaces
+step-size settings, and chunk schedules are rebuilt when the window changes.
 
 ## Tuning
 
-The adaptation factors are multiplicative per event, and the sweeps behind the thesis figures say the useful range is narrower than it looks. **Gentle factors recover; aggressive ones spiral.** A shrink factor around 2 (halve on failure, double on success) sits before the cliff; well past it, a failed window that shrinks hard fails *again* at the reduced size, shrinks again, and the run pays a long tail of tiny windows for one bad stretch. Loosening factors for Zoom behave the same way in `w`: `δw⁻` far above 2 forgives so much that the accepted window is barely constrained.
+The adaptation factors act on each accepted or retried window. Strong shrinkage
+can make subsequent windows unnecessarily short; strong growth can undo a useful
+reduction. Large Zoom weights discount the tail more heavily, so early acceptance
+alone does not establish tail accuracy. Choose factors with the required accuracy
+and work costs in mind; there is no universal best range.
 
-Three guard-rails are built in, so mis-tuning degrades rather than hangs. The shift is floored **absolutely** at `Δτ ≥ τ₀/N` (the original window over the chunk count — a floor relative to the *current* state would decay geometrically with it), window lengths are floored analogously under Stretch, and every window's restarts are capped at the strategy's `R`; a window that exhausts its budget is accepted unconverged, with a warning. That acceptance is deliberate: the alternative is non-termination, and an accepted-unconverged window is visible in `solution.restarts` and in the seams, where a hang is visible in nothing.
+The shift is floored at `Δτ ≥ τ₀/N`, using the original window length, and
+Stretch similarly floors the window length. Each window has a finite restart
+budget. At its limit, a finite unconverged window advances with a warning and
+leaves `solution.status == :budget_exhausted`; a nonfinite window stops the run
+with `:nonfinite`. Restart counts and window diagnostics retain the evidence.
 
-Two placement rules do more than any factor tuning. Pick τ so that **window 1 converges** — Leap exempts it from restarts because no shift policy can save a first window that cannot converge, and the other strategies only shrink their way out of it slowly. And keep the iteration budget honest: the per-window `K` your criterion demands must sit under `iteration_budget(S, N, ζ)` for your target speed-up, or the strategy is optimising a run that has already lost.
+Two placement rules do more than any factor tuning. Pick τ so that **window 1 converges** — Leap exempts it from restarts because no shift policy can save a first window that cannot converge, and the other strategies only shrink their way out of it slowly. And keep the iteration budget honest: the per-window fine-batch count `K` your criterion demands must sit under `iteration_budget(S, N, ζ)` for your target speed-up, using the same cost model for both. This is a work budget, not a convergence guarantee.
+
+
+
+## Cache reuse and MPI windows
+
+MoWi reuses caches when the new RHS has the same concrete type, refreshing the
+window problem and allowing Parareal to rebuild its RHS-dependent caches. A different
+RHS type requires a new MoWi cache.
+
+The bulk backends use overlap values as initial guesses at interior chunk starts.
+`PipelinedMPIBackend` uses only the seeded window initial value: its sequential
+coarse start-up overwrites interior overlap guesses. Thus its next window has the
+correct initial condition but does not benefit from those interior warm starts.
+Use a bulk backend when overlap warm starts are needed. Simply skipping a coarse
+receive would leave an unmatched MPI send; that protocol change is not implemented.
+
+### Endpoints and ensemble uncertainty
+
+The final time is a hard boundary. Compensated shifts prevent accumulated start
+drift. Endpoints within the documented scheduling tolerance are snapped to it; genuine overshoots are
+clipped and recorded in `solution.clipped`. This applies also after
+Stretch growth. The last window can therefore be shorter than the chosen
+window length. Fixed and Leap/Zoom windows do not require a fine solver with a
+`stepsize` field. Stretch requires a resizable coarse solver; `fineupdate=true`
+also requires a resizable fine solver.
+
+Ensemble observables may be real or complex. `ensemblevariance` uses the
+population mean squared modulus; `ensemblesem` instead uses sample variance
+(divisor M−1) and requires at least two windows. Its standard-error formula
+assumes independence: seeding and overlapping windows introduce correlations,
+so it is not a correlation-adjusted uncertainty estimate. Positive correlations
+make the formula optimistic; there is no general lower-bound guarantee.
