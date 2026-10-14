@@ -1,6 +1,8 @@
 # src/mowi/solve.jl
 
-function (mowi::MoWi)(cache::MoWiCache, solution::MoWiSolution, problem::AbstractInitialValueProblem; kwargs...)
+function (mowi::MoWi)(
+    cache::MoWiCache, solution::MoWiSolution, problem::AbstractInitialValueProblem; kwargs...
+)
     return mowi!(cache, solution, problem, mowi; kwargs...)
 end
 

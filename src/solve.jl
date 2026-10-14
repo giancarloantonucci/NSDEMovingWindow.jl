@@ -3,7 +3,12 @@
 
 returns the [`AbstractMovingWindowSolution`](@ref) of an `NSDEBase.AbstractInitialValueProblem`.
 """
-function NSDEBase.solve!(solution::AbstractMovingWindowSolution, problem::AbstractInitialValueProblem, solver::AbstractMovingWindowSolver; kwargs...)
+function NSDEBase.solve!(
+    solution::AbstractMovingWindowSolution,
+    problem::AbstractInitialValueProblem,
+    solver::AbstractMovingWindowSolver;
+    kwargs...,
+)
     return solver(solution, problem; kwargs...)
 end
 
@@ -12,6 +17,8 @@ end
 
 returns the [`AbstractMovingWindowSolution`](@ref) of an `NSDEBase.AbstractInitialValueProblem`.
 """
-function NSDEBase.solve(problem::AbstractInitialValueProblem, solver::AbstractMovingWindowSolver; kwargs...)
+function NSDEBase.solve(
+    problem::AbstractInitialValueProblem, solver::AbstractMovingWindowSolver; kwargs...
+)
     return solver(problem; kwargs...)
 end

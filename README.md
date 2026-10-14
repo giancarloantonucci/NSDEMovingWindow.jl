@@ -1,45 +1,66 @@
 # NSDEMovingWindow.jl
 
-A Julia package implementing the moving-window (MoWi) algorithm.
+Overlapping time windows with Parareal as the local solver.
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/stable) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDEMovingWindow.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDEMovingWindow.jl)
 
-## Installation
-
-NSDEMovingWindow is a [registered package](https://juliahub.com/ui/Search?q=NSDEMovingWindow&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
-
-```
-]add NSDEMovingWindow
-```
-
-Read the [documentation](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/dev) for a complete overview of this package.
-
-## Usage
-
-MoWi covers a long time span with a sequence of overlapping windows, each solved by a time-parallel subroutine seeded from the previous window over the overlap. The output is an **ensemble** of short window solutions, not one stitched trajectory — in a chaotic system every shift jumps orbit, by design — and the package ships the matching ensemble statistics.
+## Start here
 
 ```julia
 using NSDERungeKutta, NSDETimeParallel, NSDEMovingWindow
-
-problem = Lorenz([2.0, 3.0, -14.0], (0.0, 100.0))
-parareal = Parareal(RK4(h = 1e-4), RK4(h = 1e-2);
-                    parameters = PararealParameters(N = 8),
-                    tolerance = Tolerance(ϵ = 1e-8))
-mowi = MoWi(parareal; τ = 2.0, Δτ = 1.0, adaptive = StretchParameters())
-solution = solve(problem, mowi)
-
-solution.restarts                       # restarts per window
-X̄ = ensemblemean(solution, u -> u[1])   # ensemble statistics over the windows
-σ² = ensemblevariance(solution, u -> u[1])
+problem = Logistic(0.3, (0.0, 2.3))
+par = Parareal(RK4(h=0.01), RK4(h=0.05); N=4)
+solution = solve(problem, MoWi(par; τ=1.0, Δτ=0.5))
+@assert solution.status == :converged
+ensemblemean(solution, first; samples=20)
 ```
 
-## Strategies
+Each accepted window seeds the next one over the overlap. The result retains
+all window solutions and diagnostics; `solution(t)` selects the latest covering
+window and is not guaranteed to be continuous. Window shifts do not necessarily
+change orbit, and windows are not independent statistical samples.
 
-The `adaptive` parameter type selects the strategy — there are no strategy integers:
+The final time is a hard boundary. Genuinely shortened last windows are marked
+in `solution.clipped` and excluded from ensemble statistics by default.
+`include_clipped=true` opts in. Statistics compare equal **relative positions**
+inside retained windows; they do not establish invariant-measure accuracy.
 
-- **Fixed** (`adaptive = nothing`, default) — fixed window length τ and shift Δτ, no restarts.
-- **`StretchParameters`** (AMoWi-1) — adapt the window length: shrink τ (and the coarse step with it) on a failed window, stretch on success. The fine step stays fixed unless `fineupdate = true`.
-- **`LeapParameters`** (AMoWi-2) — adapt the shift: hop back on failure, leap forward on success, capped at the window length. The first window is exempt from restarts — pick τ so it converges.
-- **`ZoomParameters`** (AMoWi-3) — adapt the base weight of the weighted proximity function `ψ₂`, multiplicatively per restart: loosen on failure, tighten on success. Two constructor guards: the tolerance must use `ψ₂` (with `ψ₁`, zooming is a no-op), and the base weight must be **frozen** (`updatew = true` would silently undo every zoom-in) — measure `w` once with a probe window, then pass `Weights(w = ŵ)`. See the Strategies page of the docs for the recipe and tuning guidance.
+Fixed windows are the default. [Strategies](docs/src/strategies.md) explains
+Stretch (length), Leap (shift), and Zoom (fixed discount base). A finite window
+that exhausts its budget advances with a warning; an unrecovered nonfinite
+window stops the run and makes ensemble statistics unavailable.
 
-Extra keyword arguments to `solve` (e.g. `mode = "THREADS"`, `saveiterates = true`) go straight to the time-parallel subroutine.
+## Learn by running
+
+The [guided tour](docs/src/guide.md) explains each step. Its companion
+[`examples/guided_tour.jl`](examples/guided_tour.jl) runs the numerical examples
+with assertions. Run it in a project containing this package and its example
+dependencies; use Julia 1.10 or later.
+
+The ecosystem is NSDEBase → NSDERungeKutta → NSDETimeParallel → NSDEMovingWindow.
+ArrowMacros provides supporting macros; they are not required in user examples.
+
+## Installation and versions
+
+For a registered release, use `Pkg.add("NSDEMovingWindow")`. These docs describe the
+current development API; a registered version may differ. To use a local
+checkout, activate your working environment and `Pkg.develop(path="/path/to/NSDEMovingWindow")`.
+Develop matching local dependency checkouts in that environment too, then check
+`Pkg.status()`. The serial and parallel guides also require NSDERungeKutta;
+plotting requires Plots.
+
+See the [documentation](https://giancarloantonucci.github.io/NSDEMovingWindow.jl/dev/)
+and [API reference](docs/src/api.md) for details.
+
+## Build the manual locally
+
+From the package root, with matching dependency checkouts already available:
+
+```sh
+julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+julia --project=docs --threads=4 docs/make.jl
+```
+
+Documenter executes the guided-tour examples during the build. For local
+unreleased dependencies, develop their paths into `docs` before instantiating.
+The deployment step only publishes in an appropriately configured CI environment.
