@@ -80,5 +80,5 @@ end
     fresh = solve(q, solver)
     @test [boundaryvalues(w.lastiterate) for w in result.windows] == [boundaryvalues(w.lastiterate) for w in fresh.windows]
     @test cache.windowcache.chunkproblems[1].rhs === q.rhs
-    @test_throws ArgumentError solver(cache, result, IVP((u, t)->-u, [0.5], (0.0, 3.0)))
+    @test_throws ArgumentError solver(cache, result, IVP((u, t) -> -u, [0.5], (0.0, 3.0)))
 end

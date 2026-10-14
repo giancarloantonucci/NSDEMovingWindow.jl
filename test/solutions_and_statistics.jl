@@ -20,7 +20,7 @@ end
     solution = solve(problem, MoWi(good_parareal(); τ=1.0, Δτ=0.5))
     σ² = ensemblevariance(solution, u -> u[1]; samples=11)
     @test all(≥(0), σ²)
-    @test ensemblesem(solution, u -> u[1]; samples=11) ≈ sqrt.(σ² ./ (length(solution)-1))
+    @test ensemblesem(solution, u -> u[1]; samples=11) ≈ sqrt.(σ² ./ (length(solution) - 1))
 end
 
 @testset "evaluator edges (diagnostic use)" begin
@@ -61,14 +61,14 @@ end
         (["a"], ["a", ""]),
     )
         series = RecipesBase.apply_recipe(
-            Dict{Symbol,Any}(:label=>given), NSDEBase._Convergence(solution)
+            Dict{Symbol,Any}(:label => given), NSDEBase._Convergence(solution)
         )
         @test length(series) == 2
         @test [s.plotattributes[:label] for s in series] == expected
     end
     phase = RecipesBase.apply_recipe(
-        Dict{Symbol,Any}(:label=>"MoWi"), NSDEBase._PhasePlot(solution)
+        Dict{Symbol,Any}(:label => "MoWi"), NSDEBase._PhasePlot(solution)
     )
     @test phase[1].plotattributes[:label] == "MoWi"
-    @test all(s->s.plotattributes[:label] == "", phase[2:end])
+    @test all(s -> s.plotattributes[:label] == "", phase[2:end])
 end

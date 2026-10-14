@@ -40,9 +40,9 @@ end
 
 @testset "Decimal endpoint policy agrees on every rank" begin
     for backend in (MPIBackend(), PipelinedMPIBackend())
-        p=Logistic(0.3, (0.0, 1.0))
-        par=Parareal(RK4(h=0.005), Euler(h=0.01); N=4, criterion=NoStop())
-        sol=solve(p, MoWi(par; τ=0.1, Δτ=0.1); backend)
+        p = Logistic(0.3, (0.0, 1.0))
+        par = Parareal(RK4(h=0.005), Euler(h=0.01); N=4, criterion=NoStop())
+        sol = solve(p, MoWi(par; τ=0.1, Δτ=0.1); backend)
         @test sol.status == :converged
         @test length(sol) == 10
         @test NSDEMovingWindow.windowspan(sol[end])[2] == 1.0

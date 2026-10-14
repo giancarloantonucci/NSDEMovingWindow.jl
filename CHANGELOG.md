@@ -1,18 +1,55 @@
 # Changelog
 
-## 0.3.0 development revision (unreleased)
+## 0.3.0 (unreleased)
 
-- Use compensated window starts and endpoints, with rollback on Leap retries and a window-scaled endpoint snap tolerance. Retain a hard final-time boundary and the clipped-window statistics policy.
-- Snap roundoff-sized endpoint gaps to avoid spurious windows. Record genuinely clipped windows and exclude them from ensemble statistics by default (include_clipped=true opts in). Support componentwise vector observables.
-- Cap all attempted windows at the final time and accept fine-solver adapters without a step-size field when the strategy does not need one.
-- Preserve complex ensemble observables and use sample variance for independence-based SEM estimates, explicitly documenting correlation limits. Pin intended warning paths in tests.
-- Allow same-type RHS changes during cache reuse. Fix scalar convergence labels and duplicate phase-plot legend entries. Document that the pipeline preserves only the seeded window initial value.
-- Reset seeded starts and restart counts on reuse. Pass the seeded start through the window problem and broadcast collected MPI windows before reuse, including the pipelined backend.
-- Stop after unrecoverable nonfinite windows with `solution.status == :nonfinite`; retain the failed window for inspection and refuse ensemble statistics for that run. Finite budget-exhausted windows retain explicit status.
-- Floor stored Zoom weights at one and validate all strategy factors and restart limits.
-- Handle empty residual histories on nonfinite windows and seed retries from valid preceding data rather than invalid output.
-- Window adaptation replaces run-local immutable solver settings. Zoom carries a fixed-weight setting explicitly; repeated runs do not leak adapted steps or weights. Chunk schedules follow changes in window length. Updated dependency versions and documentation.
-- All Julia sources, tests, and examples follow the repository JuliaFormatter configuration. Historical implementation notes have been removed from current API descriptions.
+Requires NSDEBase 0.4 and NSDETimeParallel 0.3; the tests use NSDERungeKutta
+0.3.
+
+### Breaking
+
+- `MoWi` is immutable. Adaptive strategies replace solver settings in run-local
+  state, so repeated runs start from the configured settings and never leak
+  adapted steps or weights.
+- `ZoomParameters` requires `WeightedDefect` with a `FixedWeight`, following
+  the typed criteria of NSDETimeParallel 0.3.
+- The final time is a hard boundary: no window is integrated past it.
+  Genuinely shortened windows are recorded in `solution.clipped` and excluded
+  from ensemble statistics unless `include_clipped=true`.
+- `ensemblesem` uses sample variance (divisor M−1) and needs at least two
+  windows.
+- Supported Julia: `1.10` and later.
+
+### Added
+
+- `MoWiSolution` carries a run `status` (`:not_started`, `:converged`,
+  `:budget_exhausted` or `:nonfinite`) and the per-window `clipped` flags.
+- Ensemble statistics accept vector-valued observables (componentwise) and keep
+  complex observables complex.
+- Strategy factors and restart limits are validated.
+
+### Changed
+
+- Window starts and ends use compensated summation; Leap retries restart from
+  the previous accepted start. Roundoff-sized endpoint gaps snap to the final
+  time with a window-scaled tolerance instead of producing a spurious window.
+- An unrecoverable nonfinite window stops the run with `:nonfinite` and is kept
+  for inspection; ensemble statistics are then refused. A finite window that
+  exhausts its budget advances with a warning and `:budget_exhausted`.
+- Cache reuse accepts a changed RHS of the same type, and chunk schedules
+  follow changes of window length.
+- Stored Zoom weights are floored at one.
+- Fixed, Leap and Zoom windows accept fine solvers without a `stepsize` field.
+- Sources, tests and examples follow the repository JuliaFormatter
+  configuration (Blue style), checked in CI.
+
+### Fixed
+
+- Reuse resets seeded starts and restart counts, and the seeded start reaches
+  the window problem. MPI runs broadcast each collected window, including with
+  `PipelinedMPIBackend`.
+- Nonfinite windows with empty residual histories restart cleanly, and retries
+  are seeded from valid preceding data.
+- Scalar convergence-plot labels and duplicate phase-plot legend entries.
 
 ## 0.2.1
 

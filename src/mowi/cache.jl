@@ -1,11 +1,9 @@
-# src/mowi/cache.jl
-
 """
     MoWiCache <: AbstractMovingWindowCache
 
 One window problem and one time-parallel cache, reused for every window: the
-skeleton re-targets them with `NSDETimeParallel.shiftwindow!` as the
-window moves.
+window loop retargets them with `NSDETimeParallel.shiftwindow!` as the window
+moves.
 """
 struct MoWiCache{
     windowproblem_T<:AbstractInitialValueProblem,
@@ -20,7 +18,7 @@ function MoWiCache(problem::AbstractInitialValueProblem, mowi::MoWi)
     @↓ parallelsolver, τ = mowi
     windowproblem = remake(problem; tspan=(t0, t0 + τ))
     windowcache = NSDETimeParallel.TimeParallelCache(
-        windowproblem, parallelsolver; duration=τ/parallelsolver.parameters.N
+        windowproblem, parallelsolver; duration=τ / parallelsolver.parameters.N
     )
     return MoWiCache(windowproblem, windowcache)
 end

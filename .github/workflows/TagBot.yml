@@ -23,5 +23,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh: ${{ secrets.DOCUMENTER_KEY }}   # so the created tag triggers Documenter
-
-

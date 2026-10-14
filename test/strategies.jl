@@ -47,7 +47,7 @@ end
         NSDEMovingWindow.adapt_failure!(LeapParameters(δΔτ⁻=0.1), st, parareal)
     end
     @test st.Δτ ≥ st.Δτmin             # floored at one ORIGINAL chunk length
-    parareal2 = good_parareal()        # Stretch mutates the coarse step: fresh solver
+    parareal2 = good_parareal()
     st = mkstate(parareal2)
     for _ in 1:100
         NSDEMovingWindow.adapt_failure!(StretchParameters(δτ⁻=0.1), st, parareal2)
@@ -74,9 +74,8 @@ end
     @test all(≤(2), solution.restarts) # R caps every window
     # NOT asserted: restarts == R everywhere. A reduced shift means more
     # overlap and better seeding, so a retry can CONVERGE before exhausting R
-    # — that is recovery working, not a failed guard. The old `all(==(2))`
-    # assumed failure was unrecoverable, which bad_parareal's ϵ deliberately
-    # is not (see its comment at the top of this file).
+    # — that is recovery working, not a failed guard. bad_parareal's ϵ is
+    # deliberately reachable (see its comment in test/support.jl).
 end
 
 @testset "Zoom (AMoWi-3): multiplicative, per restart, on the base weight" begin

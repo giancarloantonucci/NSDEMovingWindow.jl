@@ -1,9 +1,6 @@
-# src/mowi/mowi.jl
-#
 # The moving-window strategies differ in what they adjust on a restart or
-# acceptance, so
-# they live in the small `adapt_failure!`/`adapt_success!` hooks below,
-# dispatched on the parameter type. `adaptive === nothing` is fixed MoWi:
+# acceptance, so they live in the small `adapt_failure!`/`adapt_success!` hooks
+# below, dispatched on the parameter type. `adaptive === nothing` is fixed MoWi:
 # never restart, never adapt.
 
 nominal_step(solver) = hasproperty(solver, :stepsize) ? solver.stepsize.h : 0.0
@@ -12,17 +9,19 @@ nominal_step(solver) = hasproperty(solver, :stepsize) ? solver.stepsize.h : 0.0
 mutable struct MoWiState
     τ::Float64
     Δτ::Float64
-    Δτmin::Float64 # one ORIGINAL chunk length τ₀/N: the shift floor. Flooring
-    # at the CURRENT τ/N is not enough — Stretch shrinks τ, so
-    # that floor shrinks with it and the advance per window can
-    # fall to one fine step (~1e5 windows to cover a domain).
-    τmin::Float64  # max(N·h_F, Δτmin): each chunk holds ≥ 1 fine step and the
-    # window still contains its shift.
+    # One original chunk length τ₀/N: the shift floor. Flooring at the current
+    # τ/N is not enough: Stretch shrinks τ, so that floor would shrink with it
+    # and the advance per window could fall to one fine step.
+    Δτmin::Float64
+    # max(N·h_F, Δτmin): each chunk holds at least one fine step and the window
+    # still contains its shift.
+    τmin::Float64
 end
 
 # ------------------------------------------------------------ adaptive hooks --
 
-adapt_failure!(::Nothing, state, parallelsolver) = parallelsolver # unreachable: fixed MoWi never restarts
+# Unreachable for failures: fixed MoWi never restarts.
+adapt_failure!(::Nothing, state, parallelsolver) = parallelsolver
 adapt_success!(::Nothing, state, parallelsolver) = parallelsolver
 
 # AMoWi-1 (Stretch): τ, Δτ and the coarse step scale together (N chunks fixed
@@ -37,9 +36,9 @@ function adapt_failure!(p::StretchParameters, state, parallelsolver)
             parallelsolver; finesolver=withstepsize(parallelsolver.finesolver, hF)
         )
     end
-    # Floors are ABSOLUTE (set at construction in MoWiState): under persistent
-    # failure τ must not decay to zero and the advance per window must not
-    # decay to one fine step.
+    # The floors are absolute (set when MoWiState is built): under persistent
+    # failure τ must not decay to zero and the advance per window must not decay
+    # to one fine step.
     τnew = max(state.τ * δτ⁻, state.τmin)
     state.Δτ = clamp(state.Δτ * δτ⁻, state.Δτmin, τnew)
     state.τ = τnew
@@ -74,12 +73,11 @@ function adapt_success!(p::StretchParameters, state, parallelsolver)
 end
 
 # AMoWi-2 (Leap): only the shift moves; growth is capped by the window length
-# (the overlap constraint). Shrinkage is FLOORED at one ORIGINAL
-# chunk length τ₀/N (`state.Δτmin`): a shift below one chunk re-solves N−1
-# chunks of known data for under a chunk of progress, and without the floor
-# Δτ decays geometrically across consecutively failing windows — the advance
-# per window tends to zero (hitting exactly 0.0 after ~10³ halvings), so the
-# loop cannot make progress. The floor is a termination safeguard.
+# (the overlap constraint). Shrinkage is floored at one original chunk length
+# τ₀/N (`state.Δτmin`): a shift below one chunk re-solves N−1 chunks of known
+# data for under a chunk of progress, and without the floor Δτ decays
+# geometrically across consecutively failing windows until the loop cannot make
+# progress. The floor is a termination guard.
 function adapt_failure!(p::LeapParameters, state, parallelsolver)
     return (state.Δτ=max(state.Δτ * p.δΔτ⁻, state.Δτmin); parallelsolver)
 end
@@ -88,8 +86,8 @@ function adapt_success!(p::LeapParameters, state, parallelsolver)
 end
 
 # AMoWi-3 (Zoom): multiplicative, per restart, on the base weight of the
-# weighted defect criterion: after ι restarts the weight is δ^ι·w.
-# Failure increases w; success decreases it, with the stored base floored at one.
+# weighted defect criterion: after ι restarts the weight is δ^ι·w. Failure
+# increases w; success decreases it, with the stored base floored at one.
 function zoom_solver(parallelsolver, factor)
     c = parallelsolver.criterion
     return remake(
@@ -121,8 +119,8 @@ function restart_start(::LeapParameters, start, previous, shift, error, previous
     return window_shift(previous, shift, previous_error)
 end
 
-# Leap leaves τ alone, so if the FIRST window cannot converge no shift policy
-# can save it : window 1 is exempt from Leap restarts.
+# Leap leaves τ alone, so if the first window cannot converge no shift policy
+# can save it: window 1 is exempt from Leap restarts.
 allowsrestart(adaptive, m) = !(adaptive isa Nothing) && !(adaptive isa LeapParameters && m == 1)
 
 # ------------------------------------------------------------- the skeleton --
@@ -177,7 +175,7 @@ function mowi!(
     else
         Δτmin
     end
-    # `fineupdate` the model variant shrinks h_F too, making this conservative
+    # Under `fineupdate` the model variant shrinks h_F too, so this is conservative.
     state = MoWiState(float(mowi.τ), float(mowi.Δτ), Δτmin, τmin)
     τ0 = τ0_accepted = float(t0)
     start_error = accepted_start_error = zero(τ0)
@@ -224,7 +222,8 @@ function mowi!(
                     copyto!(U[n], problem.u0)
                     makeGs[n] = false
                 elseif source !== nothing && T[n] ≤ τJ
-                    copyto!(U[n], source(T[n])) # copyto!, NEVER rebind: chunk problems reference these buffers
+                    # copyto!, never rebind: chunk problems reference these buffers.
+                    copyto!(U[n], source(T[n]))
                     makeGs[n] = false
                 else
                     makeGs[n] = true
@@ -266,12 +265,12 @@ function mowi!(
                 @warn "MoWi window accepted WITHOUT convergence — convergence is not guaranteed past this window" m error =
                     err restarts = restarts[m]
             end
-            # Success hooks fire on SUCCESS only. Firing them on a forced
-            # acceptance would invert the strategies' semantics: Stretch would
-            # re-grow τ immediately after R
-            # consecutive shrinks failed to converge the window, and Zoom would
-            # TIGHTEN w in response to a failure. Leaving the state alone keeps
-            # the next window at the conservative post-failure parameters.
+            # Success hooks fire on success only. Firing them on a forced
+            # acceptance would invert the strategies' meaning: Stretch would
+            # regrow τ straight after R consecutive shrinks failed to converge
+            # the window, and Zoom would tighten w in response to a failure.
+            # Leaving the state alone keeps the next window at the conservative
+            # post-failure settings.
             if adaptive !== nothing && !failed
                 parallelsolver = adapt_success!(adaptive, state, parallelsolver)
             end

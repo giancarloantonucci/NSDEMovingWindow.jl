@@ -1,5 +1,3 @@
-# src/mowi/solve.jl
-
 function (mowi::MoWi)(
     cache::MoWiCache, solution::MoWiSolution, problem::AbstractInitialValueProblem; kwargs...
 )

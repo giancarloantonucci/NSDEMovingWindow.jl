@@ -65,8 +65,8 @@ end
 
 @testset "strategies on a chaotic problem (smoke)" begin
     # Stretch/Leap/Zoom are pinned mechanically on Logistic with bad_parareal
-    # above; this runs all three END-TO-END on Lorenz — the chaotic regime
-    # actually deploys them in — at a CI-sized span.
+    # in strategies.jl; this runs all three end to end on Lorenz, the chaotic
+    # regime they are meant for, at a CI-sized span.
     lproblem = Lorenz([2.0, 3.0, -14.0], (0.0, 6.0))
     ltruth = solve(lproblem, finesolver)
     lparareal(criterion) = Parareal(
@@ -117,7 +117,7 @@ end
 @testset "kwargs reach the subroutine" begin
     mowi = MoWi(good_parareal(); τ=1.5, Δτ=1.5)
     solution = solve(problem, mowi; history=:iterates)
-    @test solution[1].iterates !== nothing                     # the old dispatcher dropped this
+    @test solution[1].iterates !== nothing
 end
 
 @testset "Window settings are reset between solves" begin

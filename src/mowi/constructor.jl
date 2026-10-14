@@ -1,14 +1,12 @@
-# src/mowi/constructor.jl
-
 """
     MoWi <: AbstractMovingWindowSolver
 
-The moving-window algorithm : long-time integration through a
-sequence of overlapping windows, each solved by a time-parallel subroutine
-seeded from the previous window's solution over the overlap. The output is an
-ENSEMBLE of short window solutions, not one long trajectory — in chaotic
-systems each shift jumps orbit by design; see [`ensemblemean`](@ref) and
-friends for the statistics this enables.
+The moving-window algorithm: long-time integration through a sequence of
+overlapping windows, each solved by a time-parallel subroutine seeded from the
+previous window's solution over the overlap. The output is an ensemble of short
+window solutions, not one long trajectory: in chaotic systems each shift may
+jump orbit. See [`ensemblemean`](@ref) and friends for the statistics this
+enables.
 
 The requested final time is a hard boundary: no window is integrated beyond it.
 A genuine final truncation is recorded in `solution.clipped` and excluded from
@@ -21,10 +19,11 @@ MoWi(parallelsolver; adaptive=nothing, τ, Δτ=τ)
 ```
 
 # Arguments
-- `parallelsolver :: AbstractTimeParallelSolver` (copied for isolation; adaptive strategies replace settings in run-local state)
+- `parallelsolver :: AbstractTimeParallelSolver` : copied for isolation;
+  adaptive strategies replace settings in run-local state
 - `adaptive` : `nothing` for fixed windows, or one of [`StretchParameters`](@ref)
   (AMoWi-1), [`LeapParameters`](@ref) (AMoWi-2), [`ZoomParameters`](@ref)
-  (AMoWi-3) — the parameter type selects the strategy
+  (AMoWi-3); the parameter type selects the strategy
 - `τ :: Real` : window length, `τ > 0`
 - `Δτ :: Real` : window shift, `0 < Δτ ≤ τ`
 """

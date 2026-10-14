@@ -1,17 +1,15 @@
-# src/mowi/solution.jl
-
 """
     MoWiSolution <: AbstractMovingWindowSolution
 
 The output of [`MoWi`](@ref): a vector of window solutions plus the restart
 count per window. `clipped` flags windows shortened by the global endpoint
-(tolerance-sized snaps are not marked). `status` is `:not_started`, `:converged` (all windows accepted
-or completed exactly), `:budget_exhausted` (at least one finite window used up its
-budget), or `:nonfinite`. A nonfinite run stops after its last retry and retains
-the failed window for inspection; ensemble statistics then raise `ArgumentError`.
-Read it as an ENSEMBLE of short-time solutions, not as one
-guaranteed continuous trajectory. Overlapping approximations can disagree;
-a shift need not change orbit when the solves agree. The statistics
+(tolerance-sized snaps are not marked). `status` is `:not_started`, `:converged`
+(all windows accepted or completed exactly), `:budget_exhausted` (at least one
+finite window used up its budget), or `:nonfinite`. A nonfinite run stops after
+its last retry and retains the failed window for inspection; ensemble statistics
+then raise `ArgumentError`. Read it as an ensemble of short-time solutions, not
+as one guaranteed continuous trajectory. Overlapping approximations can
+disagree; a shift need not change orbit when the solves agree. The statistics
 ([`ensemblemean`](@ref), [`ensemblevariance`](@ref), [`ensemblesem`](@ref))
 compare equal relative positions across windows, which need not be independent.
 
@@ -54,9 +52,10 @@ end
 """
     (solution::MoWiSolution)(tₚ::Real)
 
-evaluates the LATEST window covering `tₚ` (clamped at the ends). A diagnostic
-and plotting helper: windows overlap and may disagree, so this is NOT guaranteed to be a single continuous trajectory — for
-statistics use [`ensemblemean`](@ref) and friends instead.
+evaluates the latest window covering `tₚ` (clamped at the ends). A diagnostic
+and plotting helper: windows overlap and may disagree, so this is not
+guaranteed to be a single continuous trajectory. For statistics use
+[`ensemblemean`](@ref) and friends instead.
 """
 function (solution::MoWiSolution)(tₚ::Real)
     for m in length(solution):-1:1
@@ -123,14 +122,14 @@ MovingWindowSolution(problem::AbstractInitialValueProblem, mowi::MoWi) = MoWiSol
 """
     ensemblemean(solution::MoWiSolution, g::Function=first; samples::Integer=100, include_clipped::Bool=false)
 
-the ensemble mean of the functional `g(u)` across windows, sampled at
-`samples` equally spaced relative times over each window's own span. Returns
-a vector of length `samples`. `g` may return a number or a fixed-length numeric
-vector; vector-valued results are componentwise. Windows shortened at the global
+returns the ensemble mean of the functional `g(u)` across windows, sampled at
+`samples` equally spaced relative times over each window's own span, as a vector
+of length `samples`. `g` may return a number or a fixed-length numeric vector;
+vector-valued results are componentwise. Windows shortened at the global
 endpoint are excluded unless `include_clipped=true`. A tolerance-sized endpoint
-snap does not exclude a full window. Stretch windows still use their own relative
-time grids; these are comparisons at equal relative position, not equal elapsed
-time. `solution.clipped` records the endpoint truncations.
+snap does not exclude a full window. Stretch windows still use their own
+relative time grids; these are comparisons at equal relative position, not equal
+elapsed time. `solution.clipped` records the endpoint truncations.
 """
 function ensemblemean end
 
@@ -167,11 +166,11 @@ end
 """
     ensemblevariance(solution::MoWiSolution, g::Function=first; samples::Integer=100, include_clipped::Bool=false)
 
-Population variance across windows at equal relative times. For complex-valued
-observables this is the real mean squared modulus of the centred samples,
-componentwise for vector observables. Endpoint-truncated windows are excluded
-unless `include_clipped=true`, as in `ensemblemean`.
-This describes spread, not uncertainty of the mean.
+returns the population variance across windows at equal relative times. For
+complex-valued observables this is the real mean squared modulus of the centred
+samples, componentwise for vector observables. Endpoint-truncated windows are
+excluded unless `include_clipped=true`, as in `ensemblemean`. This describes
+spread, not uncertainty of the mean.
 """
 function ensemblevariance(
     solution::MoWiSolution, g::Function=first; samples::Integer=100, include_clipped::Bool=false
@@ -184,12 +183,13 @@ end
 """
     ensemblesem(solution::MoWiSolution, g::Function=first; samples::Integer=100, include_clipped::Bool=false)
 
-Independence-based estimate of the mean's standard error, using sample variance
-(divisor M-1) and at least two windows. Windows are seeded from earlier windows
-and may overlap, so this is not a correlation-adjusted uncertainty estimate.
-Positive correlations make it optimistic; it is not a guaranteed lower bound.
-Vector observables are handled componentwise. Endpoint-truncated windows are
-excluded unless `include_clipped=true`; M counts the retained windows.
+returns an independence-based estimate of the mean's standard error, using
+sample variance (divisor M-1) and at least two windows. Windows are seeded from
+earlier windows and may overlap, so this is not a correlation-adjusted
+uncertainty estimate. Positive correlations make it optimistic; it is not a
+guaranteed lower bound. Vector observables are handled componentwise.
+Endpoint-truncated windows are excluded unless `include_clipped=true`; M counts
+the retained windows.
 """
 function ensemblesem(
     solution::MoWiSolution, g::Function=first; samples::Integer=100, include_clipped::Bool=false
@@ -205,11 +205,11 @@ end
     flatten(solution::MoWiSolution)
 
 concatenates every window's [`flatten`](@ref)ed trajectory into one `(u, t)`
-pair. Windows OVERLAP and their approximations may disagree: `t`
-is non-monotone at window seams, and overlap regions appear once per covering
-window. Repeated overlap samples change sampling weights; concatenation alone does not
-justify attractor statistics or a single continuous trajectory. For relative-time
-ensemble summaries, use [`ensemblemean`](@ref) and friends.
+pair. Windows overlap and their approximations may disagree: `t` is
+non-monotone at window seams, and overlap regions appear once per covering
+window. Repeated overlap samples change sampling weights; concatenation alone
+does not justify attractor statistics or a single continuous trajectory. For
+relative-time ensemble summaries, use [`ensemblemean`](@ref) and friends.
 """
 function NSDETimeParallel.flatten(solution::MoWiSolution)
     u, t = flatten(solution[1])
