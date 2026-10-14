@@ -50,6 +50,10 @@ Requires NSDEBase 0.4 and NSDETimeParallel 0.3; the tests use NSDERungeKutta
 - Nonfinite windows with empty residual histories restart cleanly, and retries
   are seeded from valid preceding data.
 - Scalar convergence-plot labels and duplicate phase-plot legend entries.
+- Float32 and BigFloat window times work: windows are scheduled in at least
+  Float64, keeping BigFloat precision, instead of failing with an
+  `ArgumentError` for a Float32 span and window length, or rounding BigFloat
+  window lengths to Float64.
 
 ## 0.2.1
 

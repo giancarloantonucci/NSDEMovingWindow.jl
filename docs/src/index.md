@@ -32,7 +32,9 @@ The problem's final time is a hard boundary: MoWi does not integrate beyond it.
 Accepted window shifts use compensated summation. Leap retries restore the
 previous accepted start and its compensation before applying the shorter shift;
 Stretch and Zoom retain the attempted start. Window ends use the same addition,
-so non-overlapping windows meet without rounding gaps.
+so non-overlapping windows meet without rounding gaps. Window times are
+computed in at least Float64: Float32 spans and window lengths are widened, and
+BigFloat keeps its precision.
 
 An endpoint gap within `max(64eps(max(abs(t0), abs(tN))), 1e-9*τ_current)` is
 snapped to the final time. This is a scheduling tolerance, not an ODE error

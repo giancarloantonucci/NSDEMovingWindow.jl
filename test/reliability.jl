@@ -144,3 +144,26 @@ end
         StretchParameters(), attempted, previous, 0.1, err, previous_error
     ) == (attempted, err)
 end
+
+@testset "Float32 and BigFloat window times" begin
+    par = Parareal(RK4(h=0.01), Euler(h=0.05); N=4, criterion=NoStop())
+    # Float32 span and window length: the windows are scheduled in Float64.
+    sol = solve(Logistic(0.3f0, (0.0f0, 3.0f0)), MoWi(par; τ=0.3f0, Δτ=0.3f0))
+    @test sol.status == :converged
+    @test length(sol) == 10
+    @test !any(sol.clipped)
+    @test NSDEMovingWindow.windowspan(sol[end])[2] == 3
+    @test eltype(sol[end].lastiterate[1].u[1]) == Float32
+    # BigFloat window lengths keep their precision, whatever the span type.
+    for p in (Logistic(big"0.3", (big"0.0", big"1.0")), Logistic(0.3, (0.0, 1.0)))
+        sol = solve(p, MoWi(par; τ=big"0.1", Δτ=big"0.1"))
+        @test sol.status == :converged
+        @test length(sol) == 10
+        @test NSDEMovingWindow.windowspan(sol[2])[1] == big"0.1"
+        @test NSDEMovingWindow.windowspan(sol[end])[2] == 1
+    end
+    # A cache built for another time type is refused.
+    cache = NSDEMovingWindow.MoWiCache(Logistic(0.3, (0.0, 1.0)), MoWi(par; τ=0.5))
+    q = Logistic(0.3, (big"0.0", big"1.0"))
+    @test_throws ArgumentError MoWi(par; τ=0.5)(cache, MoWiSolution(q, MoWi(par; τ=0.5)), q)
+end

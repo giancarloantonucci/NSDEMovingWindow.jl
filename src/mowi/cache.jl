@@ -13,10 +13,19 @@ struct MoWiCache{
     windowcache::windowcache_T
 end
 
+# Window times work in at least Float64, like the chunk grid of
+# NSDETimeParallel: Float32 spans and window lengths are widened, and BigFloat
+# keeps its precision. The window problem, the loop state and the chunk grid
+# then agree in one number type.
+function windowtime(problem::AbstractInitialValueProblem, mowi::MoWi)
+    return promote_type(Float64, map(t -> typeof(float(t)), (problem.tspan..., mowi.τ, mowi.Δτ))...)
+end
+
 function MoWiCache(problem::AbstractInitialValueProblem, mowi::MoWi)
     @↓ (t0, tN) ← tspan = problem
     @↓ parallelsolver, τ = mowi
-    windowproblem = remake(problem; tspan=(t0, t0 + τ))
+    W = windowtime(problem, mowi)
+    windowproblem = remake(problem; tspan=(W(t0), W(t0) + W(τ)))
     windowcache = NSDETimeParallel.TimeParallelCache(
         windowproblem, parallelsolver; duration=τ / parallelsolver.parameters.N
     )

@@ -6,16 +6,16 @@
 nominal_step(solver) = hasproperty(solver, :stepsize) ? solver.stepsize.h : 0.0
 
 "Mutable window-length/shift state threaded through the adaptive hooks."
-mutable struct MoWiState
-    τ::Float64
-    Δτ::Float64
+mutable struct MoWiState{T<:Real}
+    τ::T
+    Δτ::T
     # One original chunk length τ₀/N: the shift floor. Flooring at the current
     # τ/N is not enough: Stretch shrinks τ, so that floor would shrink with it
     # and the advance per window could fall to one fine step.
-    Δτmin::Float64
+    Δτmin::T
     # max(N·h_F, Δτmin): each chunk holds at least one fine step and the window
     # still contains its shift.
-    τmin::Float64
+    τmin::T
 end
 
 # ------------------------------------------------------------ adaptive hooks --
@@ -161,6 +161,9 @@ function mowi!(
         )
     parallelsolver.parameters.N == length(windowcache.U) ||
         throw(DimensionMismatch("MoWi cache chunk count differs; build a new cache"))
+    W = windowtime(problem, mowi)
+    eltype(windowproblem.tspan) === W ||
+        throw(ArgumentError("MoWi cache time type differs; build a new cache"))
     parallelsolver = deepcopy(parallelsolver)
     @↓ windows, restarts, clipped = solution
     fill!(restarts, 0)
@@ -169,17 +172,17 @@ function mowi!(
     @↓ (t0, tN) ← tspan = problem
     N = parallelsolver.parameters.N
 
-    Δτmin = float(mowi.τ) / N
+    Δτmin = W(mowi.τ) / N
     τmin = if adaptive isa StretchParameters
         max(N * nominal_step(parallelsolver.finesolver), Δτmin)
     else
         Δτmin
     end
     # Under `fineupdate` the model variant shrinks h_F too, so this is conservative.
-    state = MoWiState(float(mowi.τ), float(mowi.Δτ), Δτmin, τmin)
-    τ0 = τ0_accepted = float(t0)
+    state = MoWiState{W}(mowi.τ, mowi.Δτ, Δτmin, τmin)
+    τ0 = τ0_accepted = W(t0)
     start_error = accepted_start_error = zero(τ0)
-    τJ = float(t0) # end of the covered region so far
+    τJ = W(t0) # end of the covered region so far
     time_roundoff = 64eps(max(abs(float(t0)), abs(float(tN))))
     τN = τ0 + state.τ
     isrestart = false
@@ -192,7 +195,7 @@ function mowi!(
         # non-overlapping windows then meet without a rounding-sized gap.
         nominal_end, _ = window_shift(τ0, state.τ, start_error)
         endtol = max(time_roundoff, 1e-9 * state.τ)
-        τN = nominal_end >= tN - endtol ? float(tN) : nominal_end
+        τN = nominal_end >= tN - endtol ? W(tN) : nominal_end
         duration = (τN == nominal_end ? state.τ : τN - τ0) / N
         if m > M # grow storage under adaptive shrinking
             append!(windows, Vector{AbstractTimeParallelSolution}(undef, M₀))
