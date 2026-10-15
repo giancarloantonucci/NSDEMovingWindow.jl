@@ -1,4 +1,6 @@
-# TagBot creates release tags following registry merges.
+# Tags and releases each version once its General registry PR is merged.
+# The deprecated `lookback` input and the over-broad permissions list of the
+# stock template are dropped.
 name: TagBot
 on:
   issue_comment:
