@@ -1,6 +1,5 @@
 # Run collectively with at least two ranks and the NSDE packages available.
 using NSDEMovingWindow, NSDERungeKutta, Test
-using NSDEBase: NSDEBase
 const MPI = NSDETimeParallel.MPI
 MPI.Init()
 const rank = MPI.Comm_rank(MPI.COMM_WORLD)
